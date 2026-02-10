@@ -1,0 +1,3 @@
+void disableBrowserContextMenu() {}
+
+void enableBrowserContextMenu() {}

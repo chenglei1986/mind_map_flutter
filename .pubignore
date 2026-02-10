@@ -1,0 +1,25 @@
+# Local/build artifacts
+.dart_tool/
+build/
+coverage/
+.idea/
+.kiro/
+*.iml
+
+# Internal reference project, not part of the published package
+mind-elixir-core/
+
+# Example build/tooling artifacts
+example/.dart_tool/
+example/build/
+example/.metadata
+example/.flutter-plugins-dependencies
+example/pubspec.lock
+
+# Example platform scaffolding (keep example source only)
+example/android/
+example/ios/
+example/linux/
+example/macos/
+example/windows/
+example/web/
