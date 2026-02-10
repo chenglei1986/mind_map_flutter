@@ -1,6 +1,8 @@
 name: mind_map_flutter
 description: A powerful, feature-rich mind mapping library for Flutter. Create interactive, customizable mind maps with drag-and-drop, undo/redo, themes, and export to PNG/JSON.
-version: 1.0.0
+version: 1.0.1
+homepage: https://github.com/chenglei1986/mind_map_flutter
+repository: https://github.com/chenglei1986/mind_map_flutter
 
 environment:
   sdk: ^3.10.8

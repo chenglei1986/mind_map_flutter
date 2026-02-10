@@ -1,6 +1,8 @@
-![Mind Map Demo](./doc/img/mind_map.png)
+![Mind Map Demo](doc/img/mind_map.png)
 
 # Mind Map Flutter
+
+[![pub package](https://img.shields.io/pub/v/mind_map_flutter)](https://img.shields.io/pub/v/mind_map_flutter)
 
 A Flutter mind map library for building interactive, editable mind maps with themes, history, and export support.
 
@@ -22,7 +24,7 @@ Language: **English** | [简体中文](README.zh-CN.md)
 
 ```yaml
 dependencies:
-  mind_map_flutter: ^1.0.0
+  mind_map_flutter: <latest-version>
 ```
 
 ```bash

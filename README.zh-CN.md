@@ -1,4 +1,4 @@
-![Mind Map Demo](./doc/img/mind_map.png)
+![Mind Map Demo](doc/img/mind_map.png)
 
 # Mind Map Flutter
 
@@ -22,7 +22,7 @@
 
 ```yaml
 dependencies:
-  mind_map_flutter: ^1.0.0
+  mind_map_flutter: <latest-version>
 ```
 
 ```bash
