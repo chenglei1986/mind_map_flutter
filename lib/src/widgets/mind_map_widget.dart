@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,12 +36,12 @@ class MindMapWidget extends StatefulWidget {
   final MindMapController? controller;
 
   const MindMapWidget({
-    Key? key,
+    super.key,
     required this.initialData,
     this.config = const MindMapConfig(),
     this.onEvent,
     this.controller,
-  }) : super(key: key);
+  });
 
   @override
   State<MindMapWidget> createState() => MindMapState();
@@ -271,7 +270,8 @@ class MindMapState extends State<MindMapWidget> {
     final data = _controller.getData();
     final needsLayoutRebuild = _isLayoutStructureDirty(data);
     final arrowEditInvalid =
-        _editingArrowId != null && _controller.getArrow(_editingArrowId!) == null;
+        _editingArrowId != null &&
+        _controller.getArrow(_editingArrowId!) == null;
     if (arrowEditInvalid) {
       _arrowEditFocusNode.unfocus();
     }
@@ -1626,11 +1626,11 @@ class MindMapState extends State<MindMapWidget> {
       scaledPadding.bottom,
     );
 
-    void _setCaretToStart() {
+    void setCaretToStart() {
       _editController.selection = const TextSelection.collapsed(offset: 0);
     }
 
-    void _setCaretToEnd() {
+    void setCaretToEnd() {
       _editController.selection = TextSelection.collapsed(
         offset: _editController.text.length,
       );
@@ -1652,11 +1652,11 @@ class MindMapState extends State<MindMapWidget> {
                 (contentLeft + scaledRenderedTextWidth + scaledCaretReserve)
                     .clamp(contentLeft, contentRight);
             if (tapX <= contentLeft) {
-              _setCaretToStart();
+              setCaretToStart();
               return;
             }
             if (tapX >= textRight) {
-              _setCaretToEnd();
+              setCaretToEnd();
             }
           },
           child: MouseRegion(
@@ -1885,13 +1885,20 @@ class MindMapState extends State<MindMapWidget> {
     );
     if (labelBounds == null) return const SizedBox.shrink();
 
-    final transformedBounds = MatrixUtils.transformRect(_transform, labelBounds);
+    final transformedBounds = MatrixUtils.transformRect(
+      _transform,
+      labelBounds,
+    );
     final left = transformedBounds.left;
     final top = transformedBounds.top;
     final scaledWidth = transformedBounds.width;
     final scaledHeight = transformedBounds.height;
-    final scaleX = labelBounds.width == 0 ? 1.0 : scaledWidth / labelBounds.width;
-    final scaleY = labelBounds.height == 0 ? 1.0 : scaledHeight / labelBounds.height;
+    final scaleX = labelBounds.width == 0
+        ? 1.0
+        : scaledWidth / labelBounds.width;
+    final scaleY = labelBounds.height == 0
+        ? 1.0
+        : scaledHeight / labelBounds.height;
     final scale = (scaleX + scaleY) / 2.0;
 
     const baseFontSize = 12.0;
@@ -1979,10 +1986,7 @@ class MindMapState extends State<MindMapWidget> {
     );
   }
 
-  Rect? _resolveArrowLabelBounds(
-    ArrowData arrow, {
-    String? overrideLabel,
-  }) {
+  Rect? _resolveArrowLabelBounds(ArrowData arrow, {String? overrideLabel}) {
     final data = _controller.getData();
     return ArrowRenderer.getArrowLabelBounds(
       arrow,

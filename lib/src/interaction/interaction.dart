@@ -1,5 +1,4 @@
-/// Interaction components for mind map
-library interaction;
+// Interaction components for mind map
 
 export 'drag_manager.dart';
 export 'gesture_handler.dart';

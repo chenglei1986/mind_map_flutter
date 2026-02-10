@@ -1,5 +1,4 @@
-/// Widget components for mind map
-library widgets;
+// Widget components for mind map
 
 export 'mind_map_widget.dart';
 export 'mind_map_controller.dart';

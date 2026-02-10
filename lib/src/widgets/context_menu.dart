@@ -51,7 +51,7 @@ class ContextMenuPopup extends StatelessWidget {
   final Color dividerColor;
 
   const ContextMenuPopup({
-    Key? key,
+    super.key,
     required this.position,
     required this.items,
     required this.onDismiss,
@@ -60,7 +60,7 @@ class ContextMenuPopup extends StatelessWidget {
     this.iconColor = Colors.black54,
     this.hoverColor = const Color(0xFFF5F5F5),
     this.dividerColor = const Color(0xFFE0E0E0),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -166,13 +166,12 @@ class _ContextMenuItemWidget extends StatefulWidget {
   final VoidCallback onDismiss;
 
   const _ContextMenuItemWidget({
-    Key? key,
     required this.item,
     required this.textColor,
     required this.iconColor,
     required this.hoverColor,
     required this.onDismiss,
-  }) : super(key: key);
+  });
 
   @override
   State<_ContextMenuItemWidget> createState() => _ContextMenuItemWidgetState();

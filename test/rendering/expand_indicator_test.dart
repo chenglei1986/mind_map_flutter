@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mind_map_flutter/src/models/node_data.dart';
 import 'package:mind_map_flutter/src/models/mind_map_theme.dart';
@@ -26,37 +25,36 @@ void main() {
       expect(bounds, isNull);
     });
 
-    test('getExpandIndicatorBounds returns valid bounds for node with children', () {
-      final node = NodeData.create(
-        topic: 'Parent Node',
-        children: [
-          NodeData.create(topic: 'Child 1'),
-        ],
-      );
-      final layout = NodeLayout(
-        position: const Offset(100, 100),
-        size: const Size(120, 40),
-      );
+    test(
+      'getExpandIndicatorBounds returns valid bounds for node with children',
+      () {
+        final node = NodeData.create(
+          topic: 'Parent Node',
+          children: [NodeData.create(topic: 'Child 1')],
+        );
+        final layout = NodeLayout(
+          position: const Offset(100, 100),
+          size: const Size(120, 40),
+        );
 
-      final bounds = NodeRenderer.getExpandIndicatorBounds(node, layout);
+        final bounds = NodeRenderer.getExpandIndicatorBounds(node, layout);
 
-      expect(bounds, isNotNull);
-      expect(bounds!.width, NodeRenderer.indicatorSize);
-      expect(bounds.height, NodeRenderer.indicatorSize);
-      
-      // Indicator should be to the right of the node
-      expect(bounds.center.dx, greaterThan(layout.bounds.right));
-      
-      // Indicator should be vertically centered with the node
-      expect(bounds.center.dy, layout.bounds.center.dy);
-    });
+        expect(bounds, isNotNull);
+        expect(bounds!.width, NodeRenderer.indicatorSize);
+        expect(bounds.height, NodeRenderer.indicatorSize);
+
+        // Indicator should be to the right of the node
+        expect(bounds.center.dx, greaterThan(layout.bounds.right));
+
+        // Indicator should be vertically centered with the node
+        expect(bounds.center.dy, layout.bounds.center.dy);
+      },
+    );
 
     test('indicator bounds are positioned correctly with padding', () {
       final node = NodeData.create(
         topic: 'Parent Node',
-        children: [
-          NodeData.create(topic: 'Child 1'),
-        ],
+        children: [NodeData.create(topic: 'Child 1')],
       );
       final layout = NodeLayout(
         position: const Offset(100, 100),
@@ -66,8 +64,9 @@ void main() {
       final bounds = NodeRenderer.getExpandIndicatorBounds(node, layout);
 
       // Calculate expected center position
-      final expectedCenterX = layout.bounds.right + 
-          NodeRenderer.indicatorPadding + 
+      final expectedCenterX =
+          layout.bounds.right +
+          NodeRenderer.indicatorPadding +
           NodeRenderer.indicatorSize / 2;
       final expectedCenterY = layout.bounds.center.dy;
 
@@ -78,9 +77,7 @@ void main() {
     test('drawNode renders expand indicator for node with children', () {
       final node = NodeData.create(
         topic: 'Parent Node',
-        children: [
-          NodeData.create(topic: 'Child 1'),
-        ],
+        children: [NodeData.create(topic: 'Child 1')],
       );
       final layout = NodeLayout(
         position: const Offset(100, 100),
@@ -93,14 +90,7 @@ void main() {
 
       // This should not throw and should draw the indicator
       expect(
-        () => NodeRenderer.drawNode(
-          canvas,
-          node,
-          layout,
-          theme,
-          false,
-          false,
-        ),
+        () => NodeRenderer.drawNode(canvas, node, layout, theme, false, false),
         returnsNormally,
       );
 
@@ -122,14 +112,7 @@ void main() {
 
       // This should not throw
       expect(
-        () => NodeRenderer.drawNode(
-          canvas,
-          node,
-          layout,
-          theme,
-          false,
-          false,
-        ),
+        () => NodeRenderer.drawNode(canvas, node, layout, theme, false, false),
         returnsNormally,
       );
 
@@ -138,36 +121,43 @@ void main() {
       expect(picture, isNotNull);
     });
 
-    test('indicator bounds are consistent for expanded and collapsed nodes', () {
-      final expandedNode = NodeData.create(
-        topic: 'Parent Node',
-        expanded: true,
-        children: [
-          NodeData.create(topic: 'Child 1'),
-        ],
-      );
-      final collapsedNode = expandedNode.copyWith(expanded: false);
-      
-      final layout = NodeLayout(
-        position: const Offset(100, 100),
-        size: const Size(120, 40),
-      );
+    test(
+      'indicator bounds are consistent for expanded and collapsed nodes',
+      () {
+        final expandedNode = NodeData.create(
+          topic: 'Parent Node',
+          expanded: true,
+          children: [NodeData.create(topic: 'Child 1')],
+        );
+        final collapsedNode = expandedNode.copyWith(expanded: false);
 
-      final expandedBounds = NodeRenderer.getExpandIndicatorBounds(expandedNode, layout);
-      final collapsedBounds = NodeRenderer.getExpandIndicatorBounds(collapsedNode, layout);
+        final layout = NodeLayout(
+          position: const Offset(100, 100),
+          size: const Size(120, 40),
+        );
 
-      // Bounds should be the same regardless of expanded state
-      expect(expandedBounds, isNotNull);
-      expect(collapsedBounds, isNotNull);
-      expect(expandedBounds!.center, collapsedBounds!.center);
-      expect(expandedBounds.size, collapsedBounds.size);
-    });
+        final expandedBounds = NodeRenderer.getExpandIndicatorBounds(
+          expandedNode,
+          layout,
+        );
+        final collapsedBounds = NodeRenderer.getExpandIndicatorBounds(
+          collapsedNode,
+          layout,
+        );
+
+        // Bounds should be the same regardless of expanded state
+        expect(expandedBounds, isNotNull);
+        expect(collapsedBounds, isNotNull);
+        expect(expandedBounds!.center, collapsedBounds!.center);
+        expect(expandedBounds.size, collapsedBounds.size);
+      },
+    );
 
     test('indicator size constants are reasonable', () {
       // Indicator should be visible but not too large
       expect(NodeRenderer.indicatorSize, greaterThan(10.0));
       expect(NodeRenderer.indicatorSize, lessThan(30.0));
-      
+
       // Padding should provide reasonable spacing
       expect(NodeRenderer.indicatorPadding, greaterThan(4.0));
       expect(NodeRenderer.indicatorPadding, lessThan(20.0));

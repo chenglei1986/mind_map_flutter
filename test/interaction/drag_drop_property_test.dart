@@ -18,9 +18,7 @@ void main() {
           maxChildren: 4,
         );
 
-        final controller = MindMapController(
-          initialData: initialData,
-        );
+        final controller = MindMapController(initialData: initialData);
 
         // Collect all initial node IDs
         final initialIds = collectAllNodeIds(initialData.nodeData);
@@ -29,7 +27,9 @@ void main() {
         if (initialIds.length <= 1) continue;
 
         // Find a non-root node to move
-        final nonRootIds = initialIds.where((id) => id != initialData.nodeData.id).toList();
+        final nonRootIds = initialIds
+            .where((id) => id != initialData.nodeData.id)
+            .toList();
         if (nonRootIds.isEmpty) continue;
 
         final nodeToMove = nonRootIds[i % nonRootIds.length];
@@ -67,54 +67,96 @@ void main() {
         final afterMoveIds = collectAllNodeIds(afterMove.nodeData);
 
         // 1. Total number of nodes should remain the same (Requirement 5.6)
-        expect(afterMoveIds.length, initialIds.length,
-            reason: 'Total node count should remain unchanged after move');
+        expect(
+          afterMoveIds.length,
+          initialIds.length,
+          reason: 'Total node count should remain unchanged after move',
+        );
 
         // 2. All original nodes should still exist
         for (final id in initialIds) {
-          expect(afterMoveIds.contains(id), true,
-              reason: 'Node $id should still exist after move');
+          expect(
+            afterMoveIds.contains(id),
+            true,
+            reason: 'Node $id should still exist after move',
+          );
         }
 
         // 3. The moved node should no longer be a child of its old parent
-        final oldParentAfterMove = _findNode(afterMove.nodeData, currentParent.id);
+        final oldParentAfterMove = _findNode(
+          afterMove.nodeData,
+          currentParent.id,
+        );
         if (oldParentAfterMove != null && currentParent.id != targetParentId) {
-          final oldParentChildIds = oldParentAfterMove.children.map((c) => c.id).toList();
-          expect(oldParentChildIds.contains(nodeToMove), false,
-              reason: 'Node should be removed from old parent');
+          final oldParentChildIds = oldParentAfterMove.children
+              .map((c) => c.id)
+              .toList();
+          expect(
+            oldParentChildIds.contains(nodeToMove),
+            false,
+            reason: 'Node should be removed from old parent',
+          );
         }
 
         // 4. The moved node should now be a child of the new parent (Requirement 5.3)
-        final newParentAfterMove = _findNode(afterMove.nodeData, targetParentId);
-        expect(newParentAfterMove, isNotNull,
-            reason: 'New parent should exist');
-        final newParentChildIds = newParentAfterMove!.children.map((c) => c.id).toList();
-        expect(newParentChildIds.contains(nodeToMove), true,
-            reason: 'Node should be added to new parent');
+        final newParentAfterMove = _findNode(
+          afterMove.nodeData,
+          targetParentId,
+        );
+        expect(
+          newParentAfterMove,
+          isNotNull,
+          reason: 'New parent should exist',
+        );
+        final newParentChildIds = newParentAfterMove!.children
+            .map((c) => c.id)
+            .toList();
+        expect(
+          newParentChildIds.contains(nodeToMove),
+          true,
+          reason: 'Node should be added to new parent',
+        );
 
         // 5. All descendants should move with the node (Requirement 5.6)
         final movedNodeAfter = _findNode(afterMove.nodeData, nodeToMove);
-        expect(movedNodeAfter, isNotNull,
-            reason: 'Moved node should exist');
+        expect(movedNodeAfter, isNotNull, reason: 'Moved node should exist');
         final movedNodeDescendants = collectAllNodeIds(movedNodeAfter!);
-        expect(movedNodeDescendants, descendantIds,
-            reason: 'All descendants should move with the node');
+        expect(
+          movedNodeDescendants,
+          descendantIds,
+          reason: 'All descendants should move with the node',
+        );
 
         // 6. moveNode event should be emitted (Requirement 5.7)
-        expect(controller.lastEvent, isA<MoveNodeEvent>(),
-            reason: 'moveNode event should be emitted');
+        expect(
+          controller.lastEvent,
+          isA<MoveNodeEvent>(),
+          reason: 'moveNode event should be emitted',
+        );
         final event = controller.lastEvent as MoveNodeEvent;
-        expect(event.nodeId, nodeToMove,
-            reason: 'Event should contain correct node ID');
-        expect(event.oldParentId, currentParent.id,
-            reason: 'Event should contain correct old parent ID');
-        expect(event.newParentId, targetParentId,
-            reason: 'Event should contain correct new parent ID');
+        expect(
+          event.nodeId,
+          nodeToMove,
+          reason: 'Event should contain correct node ID',
+        );
+        expect(
+          event.oldParentId,
+          currentParent.id,
+          reason: 'Event should contain correct old parent ID',
+        );
+        expect(
+          event.newParentId,
+          targetParentId,
+          reason: 'Event should contain correct new parent ID',
+        );
 
         // 7. isReorder flag should be correct (Requirement 5.4)
         final isReorder = currentParent.id == targetParentId;
-        expect(event.isReorder, isReorder,
-            reason: 'isReorder flag should be ${isReorder}');
+        expect(
+          event.isReorder,
+          isReorder,
+          reason: 'isReorder flag should be $isReorder',
+        );
 
         controller.dispose();
       }
@@ -137,9 +179,7 @@ void main() {
           theme: MindMapTheme.light,
         );
 
-        final controller = MindMapController(
-          initialData: initialData,
-        );
+        final controller = MindMapController(initialData: initialData);
 
         // Reorder siblings - move child3 to position 0
         controller.moveNode(child3.id, root.id, index: 0);
@@ -149,22 +189,37 @@ void main() {
         final rootAfterMove = afterMove.nodeData;
 
         // 1. Should still have 3 children (Requirement 5.4)
-        expect(rootAfterMove.children.length, 3,
-            reason: 'Should maintain same number of children');
+        expect(
+          rootAfterMove.children.length,
+          3,
+          reason: 'Should maintain same number of children',
+        );
 
         // 2. Order should be updated
-        expect(rootAfterMove.children[0].id, child3.id,
-            reason: 'Child 3 should be at position 0');
-        expect(rootAfterMove.children[1].id, child1.id,
-            reason: 'Child 1 should be at position 1');
-        expect(rootAfterMove.children[2].id, child2.id,
-            reason: 'Child 2 should be at position 2');
+        expect(
+          rootAfterMove.children[0].id,
+          child3.id,
+          reason: 'Child 3 should be at position 0',
+        );
+        expect(
+          rootAfterMove.children[1].id,
+          child1.id,
+          reason: 'Child 1 should be at position 1',
+        );
+        expect(
+          rootAfterMove.children[2].id,
+          child2.id,
+          reason: 'Child 2 should be at position 2',
+        );
 
         // 3. moveNode event should be emitted with isReorder=true (Requirement 5.7)
         expect(controller.lastEvent, isA<MoveNodeEvent>());
         final event = controller.lastEvent as MoveNodeEvent;
-        expect(event.isReorder, true,
-            reason: 'isReorder should be true for sibling reordering');
+        expect(
+          event.isReorder,
+          true,
+          reason: 'isReorder should be true for sibling reordering',
+        );
         expect(event.oldParentId, root.id);
         expect(event.newParentId, root.id);
 
@@ -181,9 +236,7 @@ void main() {
           maxChildren: 3,
         );
 
-        final controller = MindMapController(
-          initialData: initialData,
-        );
+        final controller = MindMapController(initialData: initialData);
 
         // Collect all initial node IDs
         final initialIds = collectAllNodeIds(initialData.nodeData);
@@ -192,7 +245,9 @@ void main() {
         if (initialIds.length <= 2) continue;
 
         // Find a non-root node to move
-        final nonRootIds = initialIds.where((id) => id != initialData.nodeData.id).toList();
+        final nonRootIds = initialIds
+            .where((id) => id != initialData.nodeData.id)
+            .toList();
         if (nonRootIds.isEmpty) continue;
 
         final nodeToMove = nonRootIds[i % nonRootIds.length];
@@ -230,18 +285,36 @@ void main() {
         expect(movedNode, isNotNull);
 
         // Verify all node properties are preserved (Requirement 5.6)
-        expect(movedNode!.topic, originalTopic,
-            reason: 'Topic should be preserved');
-        expect(movedNode.tags, originalTags,
-            reason: 'Tags should be preserved');
-        expect(movedNode.icons, originalIcons,
-            reason: 'Icons should be preserved');
-        expect(movedNode.branchColor, originalBranchColor,
-            reason: 'Branch color should be preserved');
-        expect(movedNode.expanded, originalExpanded,
-            reason: 'Expanded state should be preserved');
-        expect(movedNode.children.length, originalChildrenCount,
-            reason: 'Children count should be preserved');
+        expect(
+          movedNode!.topic,
+          originalTopic,
+          reason: 'Topic should be preserved',
+        );
+        expect(
+          movedNode.tags,
+          originalTags,
+          reason: 'Tags should be preserved',
+        );
+        expect(
+          movedNode.icons,
+          originalIcons,
+          reason: 'Icons should be preserved',
+        );
+        expect(
+          movedNode.branchColor,
+          originalBranchColor,
+          reason: 'Branch color should be preserved',
+        );
+        expect(
+          movedNode.expanded,
+          originalExpanded,
+          reason: 'Expanded state should be preserved',
+        );
+        expect(
+          movedNode.children.length,
+          originalChildrenCount,
+          reason: 'Children count should be preserved',
+        );
 
         controller.dispose();
       }
@@ -255,10 +328,7 @@ void main() {
           5,
           (index) => NodeData.create(topic: 'Child $index'),
         );
-        final parent = NodeData.create(
-          topic: 'Parent',
-          children: children,
-        );
+        final parent = NodeData.create(topic: 'Parent', children: children);
         final nodeToMove = NodeData.create(topic: 'Moving Node');
         final root = NodeData.create(
           topic: 'Root',
@@ -270,9 +340,7 @@ void main() {
           theme: MindMapTheme.light,
         );
 
-        final controller = MindMapController(
-          initialData: initialData,
-        );
+        final controller = MindMapController(initialData: initialData);
 
         // Move node to a specific index (0 to 5)
         final targetIndex = i % 6;
@@ -284,12 +352,18 @@ void main() {
         expect(parentAfterMove, isNotNull);
 
         // Should have 6 children now (5 original + 1 moved)
-        expect(parentAfterMove!.children.length, 6,
-            reason: 'Should have 6 children after move');
+        expect(
+          parentAfterMove!.children.length,
+          6,
+          reason: 'Should have 6 children after move',
+        );
 
         // The moved node should be at the target index
-        expect(parentAfterMove.children[targetIndex].id, nodeToMove.id,
-            reason: 'Moved node should be at index $targetIndex');
+        expect(
+          parentAfterMove.children[targetIndex].id,
+          nodeToMove.id,
+          reason: 'Moved node should be at index $targetIndex',
+        );
 
         // moveNode event should be emitted (Requirement 5.7)
         expect(controller.lastEvent, isA<MoveNodeEvent>());

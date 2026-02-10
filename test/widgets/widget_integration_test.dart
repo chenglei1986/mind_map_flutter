@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/src/widgets/mind_map_widget.dart';
-import '../../lib/src/widgets/mind_map_controller.dart';
-import '../../lib/src/widgets/mind_map_config.dart';
-import '../../lib/src/models/mind_map_data.dart';
-import '../../lib/src/models/node_data.dart';
-import '../../lib/src/models/mind_map_theme.dart';
+import 'package:mind_map_flutter/mind_map_flutter.dart';
 
 /// Unit tests for Widget integration features
 void main() {

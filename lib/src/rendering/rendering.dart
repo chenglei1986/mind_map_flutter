@@ -1,5 +1,4 @@
-/// Rendering components for mind map visualization
-library rendering;
+// Rendering components for mind map visualization
 
 export 'mind_map_painter.dart';
 export 'node_renderer.dart';

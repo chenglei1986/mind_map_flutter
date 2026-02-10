@@ -1,10 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
-import '../../lib/src/models/mind_map_data.dart';
-import '../../lib/src/models/node_data.dart';
-import '../../lib/src/models/mind_map_theme.dart';
-import '../../lib/src/widgets/mind_map_controller.dart';
-import '../../lib/src/widgets/mind_map_widget.dart';
+import 'package:mind_map_flutter/mind_map_flutter.dart';
 
 void main() {
   group('Arrow Creation and Editing', () {
@@ -23,10 +18,7 @@ void main() {
         ],
       );
 
-      testData = MindMapData(
-        nodeData: root,
-        theme: MindMapTheme.light,
-      );
+      testData = MindMapData(nodeData: root, theme: MindMapTheme.light);
 
       controller = MindMapController(initialData: testData);
     });
@@ -36,42 +28,45 @@ void main() {
     });
 
     group('Example Tests', () {
-      test('arrow creation flow: start mode -> select source -> select target -> create arrow', () {
-        // Example Test #7: Arrow Creation Flow
-        // Initial state: no arrows, not in arrow creation mode
-        expect(controller.getData().arrows.length, 0);
-        expect(controller.isArrowCreationMode, false);
-        expect(controller.arrowSourceNodeId, null);
-        
-        // Step 1: Start arrow creation mode
-        controller.startArrowCreationMode();
-        expect(controller.isArrowCreationMode, true);
-        expect(controller.arrowSourceNodeId, null);
-        
-        // Step 2: Select source node
-        controller.selectArrowSourceNode('child1');
-        expect(controller.isArrowCreationMode, true);
-        expect(controller.arrowSourceNodeId, 'child1');
-        
-        // Step 3: Select target node
-        controller.selectArrowTargetNode('child2');
-        
-        // Step 4: Verify arrow was created
-        final data = controller.getData();
-        expect(data.arrows.length, 1);
-        expect(data.arrows.first.fromNodeId, 'child1');
-        expect(data.arrows.first.toNodeId, 'child2');
-        
-        // Verify mode was exited
-        expect(controller.isArrowCreationMode, false);
-        expect(controller.arrowSourceNodeId, null);
-        
-        // Verify event was emitted
-        expect(controller.lastEvent, isA<ArrowCreatedEvent>());
-        final event = controller.lastEvent as ArrowCreatedEvent;
-        expect(event.fromNodeId, 'child1');
-        expect(event.toNodeId, 'child2');
-      });
+      test(
+        'arrow creation flow: start mode -> select source -> select target -> create arrow',
+        () {
+          // Example Test #7: Arrow Creation Flow
+          // Initial state: no arrows, not in arrow creation mode
+          expect(controller.getData().arrows.length, 0);
+          expect(controller.isArrowCreationMode, false);
+          expect(controller.arrowSourceNodeId, null);
+
+          // Step 1: Start arrow creation mode
+          controller.startArrowCreationMode();
+          expect(controller.isArrowCreationMode, true);
+          expect(controller.arrowSourceNodeId, null);
+
+          // Step 2: Select source node
+          controller.selectArrowSourceNode('child1');
+          expect(controller.isArrowCreationMode, true);
+          expect(controller.arrowSourceNodeId, 'child1');
+
+          // Step 3: Select target node
+          controller.selectArrowTargetNode('child2');
+
+          // Step 4: Verify arrow was created
+          final data = controller.getData();
+          expect(data.arrows.length, 1);
+          expect(data.arrows.first.fromNodeId, 'child1');
+          expect(data.arrows.first.toNodeId, 'child2');
+
+          // Verify mode was exited
+          expect(controller.isArrowCreationMode, false);
+          expect(controller.arrowSourceNodeId, null);
+
+          // Verify event was emitted
+          expect(controller.lastEvent, isA<ArrowCreatedEvent>());
+          final event = controller.lastEvent as ArrowCreatedEvent;
+          expect(event.fromNodeId, 'child1');
+          expect(event.toNodeId, 'child2');
+        },
+      );
     });
 
     group('Arrow Creation Mode', () {
@@ -104,12 +99,15 @@ void main() {
         expect(controller.isArrowCreationMode, true);
       });
 
-      test('should throw error when selecting source node outside arrow creation mode', () {
-        expect(
-          () => controller.selectArrowSourceNode('child1'),
-          throwsStateError,
-        );
-      });
+      test(
+        'should throw error when selecting source node outside arrow creation mode',
+        () {
+          expect(
+            () => controller.selectArrowSourceNode('child1'),
+            throwsStateError,
+          );
+        },
+      );
 
       test('should create arrow when selecting target node', () {
         controller.startArrowCreationMode();
@@ -188,18 +186,12 @@ void main() {
 
       test('should throw error when adding arrow with invalid node IDs', () {
         expect(
-          () => controller.addArrow(
-            fromNodeId: 'invalid',
-            toNodeId: 'child2',
-          ),
+          () => controller.addArrow(fromNodeId: 'invalid', toNodeId: 'child2'),
           throwsA(isA<InvalidNodeIdException>()),
         );
 
         expect(
-          () => controller.addArrow(
-            fromNodeId: 'child1',
-            toNodeId: 'invalid',
-          ),
+          () => controller.addArrow(fromNodeId: 'child1', toNodeId: 'invalid'),
           throwsA(isA<InvalidNodeIdException>()),
         );
       });
@@ -345,12 +337,12 @@ void main() {
         expect(arrow.delta1, delta1);
         expect(arrow.delta2, delta2);
       });
-      
+
       test('should allow manual control point specification', () {
         // Users can still manually specify control points if desired
         const manualDelta1 = Offset(50, 0);
         const manualDelta2 = Offset(-50, 0);
-        
+
         controller.addArrow(
           fromNodeId: 'child1',
           toNodeId: 'child2',

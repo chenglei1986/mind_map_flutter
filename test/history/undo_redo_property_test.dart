@@ -26,43 +26,66 @@ void main() {
         );
 
         // Initially, there should be no operations to undo
-        expect(controller.canUndo(), false,
-            reason: 'Initially there should be no operations to undo');
-        expect(controller.canRedo(), false,
-            reason: 'Initially there should be no operations to redo');
+        expect(
+          controller.canUndo(),
+          false,
+          reason: 'Initially there should be no operations to undo',
+        );
+        expect(
+          controller.canRedo(),
+          false,
+          reason: 'Initially there should be no operations to redo',
+        );
 
         // Test 1: Create node operation should be recorded
         controller.addChildNode(initialData.nodeData.id, topic: 'Test Child');
-        expect(controller.canUndo(), true,
-            reason: 'Create node operation should be recorded in history');
+        expect(
+          controller.canUndo(),
+          true,
+          reason: 'Create node operation should be recorded in history',
+        );
 
         // Test 2: Edit node operation should be recorded
         final nodeToEdit = _findAnyNode(controller.getData().nodeData);
         if (nodeToEdit != null) {
           controller.updateNodeTopic(nodeToEdit.id, 'Edited Topic');
-          expect(controller.canUndo(), true,
-              reason: 'Edit node operation should be recorded in history');
+          expect(
+            controller.canUndo(),
+            true,
+            reason: 'Edit node operation should be recorded in history',
+          );
         }
 
         // Test 3: Delete node operation should be recorded (if there are children)
-        final nodeWithChildren = _findNodeWithChildren(controller.getData().nodeData);
+        final nodeWithChildren = _findNodeWithChildren(
+          controller.getData().nodeData,
+        );
         if (nodeWithChildren != null && nodeWithChildren.children.isNotEmpty) {
           final childToDelete = nodeWithChildren.children.first;
           controller.removeNode(childToDelete.id);
-          expect(controller.canUndo(), true,
-              reason: 'Delete node operation should be recorded in history');
+          expect(
+            controller.canUndo(),
+            true,
+            reason: 'Delete node operation should be recorded in history',
+          );
         }
 
         // Test 4: Move node operation should be recorded
         final currentData = controller.getData();
         final nodeToMove = _findNodeWithParent(currentData.nodeData);
-        final targetParent = _findDifferentNode(currentData.nodeData, nodeToMove?.id);
+        final targetParent = _findDifferentNode(
+          currentData.nodeData,
+          nodeToMove?.id,
+        );
         if (nodeToMove != null && targetParent != null) {
           // Ensure we're not moving to a descendant
           if (!_isDescendant(nodeToMove, targetParent.id)) {
             controller.moveNode(nodeToMove.id, targetParent.id);
-            expect(controller.canUndo(), true,
-                reason: 'Move node operation should be recorded in history');
+            expect(
+              controller.canUndo(),
+              true,
+              reason: 'Move node operation should be recorded in history',
+            );
           }
         }
 
@@ -90,30 +113,35 @@ void main() {
 
         // Perform a random operation
         final operationType = i % 4;
-        
+
         switch (operationType) {
           case 0: // Create node
             controller.addChildNode(initialData.nodeData.id, topic: 'New Node');
             break;
-            
+
           case 1: // Edit node
             final nodeToEdit = _findAnyNode(controller.getData().nodeData);
             if (nodeToEdit != null) {
-              controller.updateNodeTopic(nodeToEdit.id, 'Edited ${i}');
+              controller.updateNodeTopic(nodeToEdit.id, 'Edited $i');
             }
             break;
-            
+
           case 2: // Delete node
-            final nodeToDelete = _findDeletableNode(controller.getData().nodeData);
+            final nodeToDelete = _findDeletableNode(
+              controller.getData().nodeData,
+            );
             if (nodeToDelete != null) {
               controller.removeNode(nodeToDelete.id);
             }
             break;
-            
+
           case 3: // Move node
             final currentData = controller.getData();
             final nodeToMove = _findNodeWithParent(currentData.nodeData);
-            final targetParent = _findDifferentNode(currentData.nodeData, nodeToMove?.id);
+            final targetParent = _findDifferentNode(
+              currentData.nodeData,
+              nodeToMove?.id,
+            );
             if (nodeToMove != null && targetParent != null) {
               if (!_isDescendant(nodeToMove, targetParent.id)) {
                 controller.moveNode(nodeToMove.id, targetParent.id);
@@ -129,31 +157,49 @@ void main() {
         if (controller.canUndo()) {
           // Undo the operation (Requirement 8.2)
           final undoSuccess = controller.undo();
-          expect(undoSuccess, true,
-              reason: 'Undo should succeed when there are operations to undo');
+          expect(
+            undoSuccess,
+            true,
+            reason: 'Undo should succeed when there are operations to undo',
+          );
 
           // Verify state is restored to initial state
           final afterUndoState = _serializeData(controller.getData());
-          expect(afterUndoState, initialState,
-              reason: 'Undo should restore to initial state');
+          expect(
+            afterUndoState,
+            initialState,
+            reason: 'Undo should restore to initial state',
+          );
 
           // Verify redo is now available
-          expect(controller.canRedo(), true,
-              reason: 'Redo should be available after undo');
+          expect(
+            controller.canRedo(),
+            true,
+            reason: 'Redo should be available after undo',
+          );
 
           // Redo the operation (Requirement 8.3)
           final redoSuccess = controller.redo();
-          expect(redoSuccess, true,
-              reason: 'Redo should succeed when there are operations to redo');
+          expect(
+            redoSuccess,
+            true,
+            reason: 'Redo should succeed when there are operations to redo',
+          );
 
           // Verify state is restored to after-operation state (Requirement 8.4)
           final afterRedoState = _serializeData(controller.getData());
-          expect(afterRedoState, afterOperationState,
-              reason: 'Redo should restore to state after operation');
+          expect(
+            afterRedoState,
+            afterOperationState,
+            reason: 'Redo should restore to state after operation',
+          );
 
           // Verify undo is available again
-          expect(controller.canUndo(), true,
-              reason: 'Undo should be available after redo');
+          expect(
+            controller.canUndo(),
+            true,
+            reason: 'Undo should be available after redo',
+          );
         }
 
         controller.dispose();
@@ -177,49 +223,75 @@ void main() {
 
         // Perform first operation
         controller.addChildNode(initialData.nodeData.id, topic: 'First Node');
-        expect(controller.canUndo(), true,
-            reason: 'First operation should be recorded');
+        expect(
+          controller.canUndo(),
+          true,
+          reason: 'First operation should be recorded',
+        );
 
         // Undo the first operation
         controller.undo();
-        expect(controller.canRedo(), true,
-            reason: 'Redo should be available after undo');
+        expect(
+          controller.canRedo(),
+          true,
+          reason: 'Redo should be available after undo',
+        );
 
         // Perform a new operation (different type based on iteration)
         final newOperationType = i % 3;
         switch (newOperationType) {
           case 0: // Create a different node
-            controller.addChildNode(initialData.nodeData.id, topic: 'Second Node');
+            controller.addChildNode(
+              initialData.nodeData.id,
+              topic: 'Second Node',
+            );
             break;
-            
+
           case 1: // Edit a node
             final nodeToEdit = _findAnyNode(controller.getData().nodeData);
             if (nodeToEdit != null) {
-              controller.updateNodeTopic(nodeToEdit.id, 'New Edit ${i}');
+              controller.updateNodeTopic(nodeToEdit.id, 'New Edit $i');
             } else {
               // Fallback to create if no node to edit
-              controller.addChildNode(initialData.nodeData.id, topic: 'Fallback Node');
+              controller.addChildNode(
+                initialData.nodeData.id,
+                topic: 'Fallback Node',
+              );
             }
             break;
-            
+
           case 2: // Create sibling
             final nodeForSibling = _findAnyNode(controller.getData().nodeData);
-            if (nodeForSibling != null && nodeForSibling.id != initialData.nodeData.id) {
-              controller.addSiblingNode(nodeForSibling.id, topic: 'Sibling Node');
+            if (nodeForSibling != null &&
+                nodeForSibling.id != initialData.nodeData.id) {
+              controller.addSiblingNode(
+                nodeForSibling.id,
+                topic: 'Sibling Node',
+              );
             } else {
               // Fallback to create child
-              controller.addChildNode(initialData.nodeData.id, topic: 'Fallback Node');
+              controller.addChildNode(
+                initialData.nodeData.id,
+                topic: 'Fallback Node',
+              );
             }
             break;
         }
 
         // Verify redo history is cleared (Requirement 8.5)
-        expect(controller.canRedo(), false,
-            reason: 'Redo history should be cleared after new operation following undo');
+        expect(
+          controller.canRedo(),
+          false,
+          reason:
+              'Redo history should be cleared after new operation following undo',
+        );
 
         // Verify undo is still available for the new operation
-        expect(controller.canUndo(), true,
-            reason: 'Undo should be available for the new operation');
+        expect(
+          controller.canUndo(),
+          true,
+          reason: 'Undo should be available for the new operation',
+        );
 
         controller.dispose();
       }
@@ -248,93 +320,130 @@ void main() {
 
         for (int j = 0; j < operationCount; j++) {
           // Perform operation
-          controller.addChildNode(
-            initialData.nodeData.id,
-            topic: 'Node $j',
-          );
-          
+          controller.addChildNode(initialData.nodeData.id, topic: 'Node $j');
+
           // Capture state after each operation
           states.add(_serializeData(controller.getData()));
         }
 
         // Verify all operations can be undone
-        expect(controller.canUndo(), true,
-            reason: 'Should be able to undo after multiple operations');
+        expect(
+          controller.canUndo(),
+          true,
+          reason: 'Should be able to undo after multiple operations',
+        );
 
         // Undo all operations one by one
         for (int j = operationCount - 1; j >= 0; j--) {
           controller.undo();
           final currentState = _serializeData(controller.getData());
-          expect(currentState, states[j],
-              reason: 'State after undo $j should match state before operation $j');
+          expect(
+            currentState,
+            states[j],
+            reason:
+                'State after undo $j should match state before operation $j',
+          );
         }
 
         // Verify we're back to initial state
         final finalState = _serializeData(controller.getData());
-        expect(finalState, initialState,
-            reason: 'After undoing all operations, should be back to initial state');
+        expect(
+          finalState,
+          initialState,
+          reason:
+              'After undoing all operations, should be back to initial state',
+        );
 
         // Verify no more undo available
-        expect(controller.canUndo(), false,
-            reason: 'No more undo should be available after undoing all operations');
+        expect(
+          controller.canUndo(),
+          false,
+          reason:
+              'No more undo should be available after undoing all operations',
+        );
 
         // Verify redo is available
-        expect(controller.canRedo(), true,
-            reason: 'Redo should be available after undoing operations');
+        expect(
+          controller.canRedo(),
+          true,
+          reason: 'Redo should be available after undoing operations',
+        );
 
         // Redo all operations
         for (int j = 1; j <= operationCount; j++) {
           controller.redo();
           final currentState = _serializeData(controller.getData());
-          expect(currentState, states[j],
-              reason: 'State after redo $j should match state after operation $j');
+          expect(
+            currentState,
+            states[j],
+            reason: 'State after redo $j should match state after operation $j',
+          );
         }
 
         // Verify no more redo available
-        expect(controller.canRedo(), false,
-            reason: 'No more redo should be available after redoing all operations');
+        expect(
+          controller.canRedo(),
+          false,
+          reason:
+              'No more redo should be available after redoing all operations',
+        );
 
         controller.dispose();
       }
     });
 
     // Additional property test: Undo/redo with disabled undo
-    test('Property 16 (Extended): Operations not recorded when undo disabled', () {
-      for (int i = 0; i < iterations; i++) {
-        // Generate random initial data
-        final initialData = generateRandomMindMapData(
-          maxDepth: 2,
-          maxChildren: 3,
-        );
+    test(
+      'Property 16 (Extended): Operations not recorded when undo disabled',
+      () {
+        for (int i = 0; i < iterations; i++) {
+          // Generate random initial data
+          final initialData = generateRandomMindMapData(
+            maxDepth: 2,
+            maxChildren: 3,
+          );
 
-        final controller = MindMapController(
-          initialData: initialData,
-          config: const MindMapConfig(allowUndo: false), // Undo disabled
-        );
+          final controller = MindMapController(
+            initialData: initialData,
+            config: const MindMapConfig(allowUndo: false), // Undo disabled
+          );
 
-        // Perform operations
-        controller.addChildNode(initialData.nodeData.id, topic: 'Test Node');
-        
-        final nodeToEdit = _findAnyNode(controller.getData().nodeData);
-        if (nodeToEdit != null) {
-          controller.updateNodeTopic(nodeToEdit.id, 'Edited');
+          // Perform operations
+          controller.addChildNode(initialData.nodeData.id, topic: 'Test Node');
+
+          final nodeToEdit = _findAnyNode(controller.getData().nodeData);
+          if (nodeToEdit != null) {
+            controller.updateNodeTopic(nodeToEdit.id, 'Edited');
+          }
+
+          // Verify operations are NOT recorded when undo is disabled
+          expect(
+            controller.canUndo(),
+            false,
+            reason: 'Operations should not be recorded when undo is disabled',
+          );
+          expect(
+            controller.canRedo(),
+            false,
+            reason: 'Redo should not be available when undo is disabled',
+          );
+
+          // Verify undo/redo return false
+          expect(
+            controller.undo(),
+            false,
+            reason: 'Undo should return false when disabled',
+          );
+          expect(
+            controller.redo(),
+            false,
+            reason: 'Redo should return false when disabled',
+          );
+
+          controller.dispose();
         }
-
-        // Verify operations are NOT recorded when undo is disabled
-        expect(controller.canUndo(), false,
-            reason: 'Operations should not be recorded when undo is disabled');
-        expect(controller.canRedo(), false,
-            reason: 'Redo should not be available when undo is disabled');
-
-        // Verify undo/redo return false
-        expect(controller.undo(), false,
-            reason: 'Undo should return false when disabled');
-        expect(controller.redo(), false,
-            reason: 'Redo should return false when disabled');
-
-        controller.dispose();
-      }
-    });
+      },
+    );
 
     // Additional property test: Undo/redo idempotency
     test('Property 17 (Extended): Undo/redo idempotency', () {
@@ -359,12 +468,18 @@ void main() {
 
         // Try to undo again (should have no effect)
         final secondUndoResult = controller.undo();
-        expect(secondUndoResult, false,
-            reason: 'Second undo should return false when nothing to undo');
-        
+        expect(
+          secondUndoResult,
+          false,
+          reason: 'Second undo should return false when nothing to undo',
+        );
+
         final afterSecondUndo = _serializeData(controller.getData());
-        expect(afterSecondUndo, afterFirstUndo,
-            reason: 'Multiple undos when nothing to undo should not change state');
+        expect(
+          afterSecondUndo,
+          afterFirstUndo,
+          reason: 'Multiple undos when nothing to undo should not change state',
+        );
 
         // Redo once
         controller.redo();
@@ -372,12 +487,18 @@ void main() {
 
         // Try to redo again (should have no effect)
         final secondRedoResult = controller.redo();
-        expect(secondRedoResult, false,
-            reason: 'Second redo should return false when nothing to redo');
-        
+        expect(
+          secondRedoResult,
+          false,
+          reason: 'Second redo should return false when nothing to redo',
+        );
+
         final afterSecondRedo = _serializeData(controller.getData());
-        expect(afterSecondRedo, afterFirstRedo,
-            reason: 'Multiple redos when nothing to redo should not change state');
+        expect(
+          afterSecondRedo,
+          afterFirstRedo,
+          reason: 'Multiple redos when nothing to redo should not change state',
+        );
 
         controller.dispose();
       }
@@ -398,7 +519,7 @@ void main() {
         );
 
         // Perform a sequence: create -> edit -> undo edit -> create another -> undo all
-        
+
         // Step 1: Create node
         controller.addChildNode(initialData.nodeData.id, topic: 'Node 1');
         final afterCreate1 = _serializeData(controller.getData());
@@ -410,22 +531,32 @@ void main() {
         // Step 3: Undo the edit
         controller.undo();
         final afterUndoEdit = _serializeData(controller.getData());
-        expect(afterUndoEdit, afterCreate1,
-            reason: 'After undoing edit, should be back to state after create');
+        expect(
+          afterUndoEdit,
+          afterCreate1,
+          reason: 'After undoing edit, should be back to state after create',
+        );
 
         // Step 4: Create another node (this should clear redo)
         controller.addChildNode(initialData.nodeData.id, topic: 'Node 2');
-        expect(controller.canRedo(), false,
-            reason: 'Creating new node after undo should clear redo');
+        expect(
+          controller.canRedo(),
+          false,
+          reason: 'Creating new node after undo should clear redo',
+        );
 
         // Step 5: Undo both creates
         controller.undo(); // Undo create node 2
         controller.undo(); // Undo create node 1
-        
+
         final finalState = _serializeData(controller.getData());
         final initialState = _serializeData(initialData);
-        expect(finalState, initialState,
-            reason: 'After undoing all operations, should be back to initial state');
+        expect(
+          finalState,
+          initialState,
+          reason:
+              'After undoing all operations, should be back to initial state',
+        );
 
         controller.dispose();
       }

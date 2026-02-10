@@ -58,9 +58,7 @@ class ZoomPanManager extends ChangeNotifier {
     if (delta.dx == 0.0 && delta.dy == 0.0) {
       return;
     }
-    if (_initialTranslation == null) {
-      _initialTranslation = _translation;
-    }
+    _initialTranslation ??= _translation;
 
     // Update translation by the delta
     _translation = _translation + delta;
@@ -208,10 +206,5 @@ class ZoomPanManager extends ChangeNotifier {
 
     _updateTransform();
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }
