@@ -2,6 +2,12 @@
 
 All notable changes to this package will be documented in this file.
 
+## 1.1.1
+
+- Fix centering logic after window resize by dynamically updating viewport constraints.
+- Fix unexpected line-wrapping when editing summary text at small overall zoom scales.
+- Fix external-link opening behavior on non-web platforms.
+
 ## 1.1.0
 
 - Add `MindMapConfig.readOnly` mode.

@@ -6,6 +6,8 @@
 
 语言: [English](README.md) | **简体中文**
 
+[API 文档](doc/API_REFERENCES.zh-CN.md)
+
 ## 功能概览
 
 - 可编辑节点树，支持拖拽重组
@@ -133,6 +135,207 @@ await File('mind_map.png').writeAsBytes(pngBytes);
 ```
 
 说明：`exportToPng()` 需要在 `MindMapWidget` 完成挂载并绘制后调用。
+
+### JSON 导出/导入格式与字段说明
+
+```dart
+import 'dart:convert';
+
+// 导出
+final jsonText = controller.exportToJson();
+
+// 导入
+final map = jsonDecode(jsonText) as Map<String, dynamic>;
+final data = MindMapData.fromJson(map);
+controller.refresh(data);
+```
+
+#### 顶层字段
+
+| 字段 | 类型 | 是否必填 | 含义 |
+| --- | --- | --- | --- |
+| `nodeData` | `Map<String, dynamic>` | 是 | 根节点（递归包含整棵树） |
+| `arrows` | `List<Map>` | 否 | 节点之间的箭头关系 |
+| `summaries` | `List<Map>` | 否 | 同级节点分组摘要 |
+| `direction` | `String` | 否 | 布局方向：`left` / `right` / `side`（默认 `side`） |
+| `theme` | `Map<String, dynamic>` | 否 | 主题配置（默认 `MindMapTheme.light`） |
+
+#### `nodeData` 常用字段
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `id` | `String` | 节点唯一 ID（缺失时自动生成） |
+| `topic` | `String` | 节点文本 |
+| `children` | `List<Map>` | 子节点列表 |
+| `style` | `Map` | 节点样式（如字体、颜色、背景、宽度） |
+| `tags` | `List<Map>` | 标签列表（`text` / `className`） |
+| `icons` | `List<String>` | 图标（通常用 emoji） |
+| `hyperLink` | `String` | 超链接地址 |
+| `expanded` | `bool` | 是否展开 |
+| `direction` | `String` | 节点方向：`left` / `right` / `side` |
+| `image` | `Map` | 旧版单图字段（兼容） |
+| `images` | `List<Map>` | 推荐图片字段（支持多图） |
+| `branchColor` | `int` | 分支颜色 |
+| `note` | `String` | 备注文本 |
+
+#### `arrows` / `summaries` / `theme` 关键字段
+
+| 字段路径 | 类型 | 含义 |
+| --- | --- | --- |
+| `arrows[].fromNodeId` / `toNodeId` | `String` | 箭头起止节点 ID |
+| `arrows[].delta1` / `delta2` | `Map(dx,dy)` | 箭头贝塞尔控制点偏移 |
+| `arrows[].bidirectional` | `bool` | 是否双向箭头 |
+| `arrows[].style` | `Map` | 箭头样式（颜色、线宽、虚线、透明度） |
+| `summaries[].parentNodeId` | `String` | 父节点 ID（被分组节点的父节点） |
+| `summaries[].startIndex` / `endIndex` | `int` | 在父节点 `children` 里的起止索引（闭区间） |
+| `summaries[].label` | `String` | 摘要文字 |
+| `summaries[].style` | `Map` | 摘要样式（线条/文字颜色） |
+| `theme.name` | `String` | 主题名 |
+| `theme.palette` | `List<int>` | 调色板颜色 |
+| `theme.variables` | `Map` | 主题变量（间距、颜色、圆角、内边距等） |
+
+说明：
+- 颜色字段是 `Color.toARGB32()` 的十进制整数。
+- `fontWeight` 使用 `FontWeight.values[index]`（例如 `w700` 常见是 `6`）。
+- `image` 为兼容旧格式保留，推荐使用 `images`。
+- `NodeStyle.border`、`TagData.style` 当前不参与 JSON 序列化。
+- `summary` 建议只分组同一侧的连续兄弟节点（避免跨左右两侧分组）。
+
+#### JSON 示例
+
+```json
+{
+  "nodeData": {
+    "id": "root",
+    "topic": "版本发布",
+    "children": [
+      {
+        "id": "n-plan",
+        "topic": "规划",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": 6
+        },
+        "children": [
+          {
+            "id": "n-plan-scope",
+            "topic": "范围确认",
+            "expanded": true
+          }
+        ],
+        "tags": [{"text": "P1"}],
+        "icons": ["📝"],
+        "expanded": true,
+        "direction": "right"
+      },
+      {
+        "id": "n-dev",
+        "topic": "开发",
+        "icons": ["💻"],
+        "hyperLink": "https://example.com/spec",
+        "expanded": true,
+        "direction": "right",
+        "note": "实现与自测"
+      },
+      {
+        "id": "n-qa",
+        "topic": "测试",
+        "icons": ["✅"],
+        "expanded": true,
+        "direction": "right"
+      },
+      {
+        "id": "n-release",
+        "topic": "发布",
+        "icons": [
+          "🚀"
+        ],
+        "expanded": true,
+        "direction": "right"
+      }
+    ],
+    "expanded": true
+  },
+  "arrows": [
+    {
+      "id": "a-qa-release",
+      "fromNodeId": "n-qa",
+      "toNodeId": "n-release",
+      "label": "通过后发布",
+      "delta1": {
+        "dx": 134.28137003841232,
+        "dy": 15.201664532650454
+      },
+      "delta2": {
+        "dx": 118.07762483994884,
+        "dy": -8.633402688860485
+      },
+      "bidirectional": false
+    }
+  ],
+  "summaries": [
+    {
+      "id": "s-exec",
+      "parentNodeId": "root",
+      "startIndex": 1,
+      "endIndex": 3,
+      "label": "执行阶段"
+    }
+  ],
+  "direction": "right",
+  "theme": {
+    "name": "light",
+    "palette": [
+      4293467747,
+      4288423856,
+      4284955319,
+      4282339765,
+      4280391411,
+      4278238420,
+      4278228616,
+      4283215696,
+      4287349578,
+      4291681337,
+      4294961979,
+      4294951175,
+      4294940672,
+      4294924066
+    ],
+    "variables": {
+      "nodeGapX": 30,
+      "nodeGapY": 10,
+      "mainGapX": 65,
+      "mainGapY": 45,
+      "mainColor": 4281545523,
+      "mainBgColor": 4294967295,
+      "color": 4281545523,
+      "bgColor": 4294967295,
+      "selectedColor": 4280391411,
+      "accentColor": 4294940672,
+      "rootColor": 4294967295,
+      "rootBgColor": 4283191145,
+      "rootBorderColor": 4283191145,
+      "rootRadius": 16,
+      "mainRadius": 16,
+      "topicPadding": {
+        "left": 3,
+        "top": 3,
+        "right": 3,
+        "bottom": 3
+      },
+      "panelColor": 4281545523,
+      "panelBgColor": 4294967295,
+      "panelBorderColor": 4292927712,
+      "mapPadding": {
+        "left": 50,
+        "top": 50,
+        "right": 50,
+        "bottom": 50
+      }
+    }
+  }
+}
+```
 
 ## 致谢
 
