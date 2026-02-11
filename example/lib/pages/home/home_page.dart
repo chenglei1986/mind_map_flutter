@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:gal/gal.dart';
 import 'package:mind_map_flutter/mind_map_flutter.dart';
 import '../../utils/web_export_downloader_stub.dart'
@@ -38,6 +39,7 @@ class _HomePageState extends State<HomePage> {
   StreamSubscription<MindMapEvent>? _eventSubscription;
   final List<String> _eventLogs = <String>[];
   bool _readOnly = false;
+  bool _controllerRebuildScheduled = false;
 
   @override
   void initState() {
@@ -59,9 +61,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onControllerChanged() {
-    if (mounted) {
-      setState(() {});
+    if (!mounted) return;
+
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    final inBuildPhase =
+        phase == SchedulerPhase.persistentCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks;
+
+    if (inBuildPhase) {
+      if (_controllerRebuildScheduled) return;
+      _controllerRebuildScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _controllerRebuildScheduled = false;
+        if (!mounted) return;
+        setState(() {});
+      });
+      return;
     }
+
+    setState(() {});
   }
 
   void _toggleReadOnly() {

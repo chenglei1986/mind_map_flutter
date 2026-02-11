@@ -1844,6 +1844,15 @@ class MindMapState extends State<MindMapWidget> {
       wordSpacing: 0.0,
       textBaseline: TextBaseline.alphabetic,
     );
+    final shouldWrap = MindMapState.shouldWrapEditText(
+      text: _summaryEditController.text,
+      style: measureTextStyle,
+      contentWidth: math.max(
+        0.0,
+        labelBounds.width - padding.horizontal + caretReserve,
+      ),
+      caretReserve: caretReserve,
+    );
 
     return Positioned(
       left: left,
@@ -1864,9 +1873,13 @@ class MindMapState extends State<MindMapWidget> {
                 mouseCursor: SystemMouseCursors.text,
                 enableInteractiveSelection: true,
                 minLines: 1,
-                maxLines: null,
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
+                maxLines: shouldWrap ? null : 1,
+                keyboardType: shouldWrap
+                    ? TextInputType.multiline
+                    : TextInputType.text,
+                textInputAction: shouldWrap
+                    ? TextInputAction.newline
+                    : TextInputAction.done,
                 textAlign: TextAlign.left,
                 textAlignVertical: TextAlignVertical.top,
                 style: measureTextStyle.copyWith(fontSize: scaledFontSize),
