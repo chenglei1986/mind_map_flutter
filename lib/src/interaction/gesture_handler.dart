@@ -18,6 +18,7 @@ class GestureHandler {
   final MindMapController controller;
   Map<String, NodeLayout> nodeLayouts;
   Matrix4 transform;
+  bool isReadOnly;
   final void Function(String nodeId)? onBeginEdit;
   final void Function(String summaryId)? onBeginEditSummary;
   final void Function(String arrowId)? onBeginEditArrow;
@@ -59,6 +60,7 @@ class GestureHandler {
     required this.controller,
     required this.nodeLayouts,
     required this.transform,
+    this.isReadOnly = false,
     this.onBeginEdit,
     this.onBeginEditSummary,
     this.onBeginEditArrow,
@@ -71,9 +73,13 @@ class GestureHandler {
   void updateContext({
     required Map<String, NodeLayout> nodeLayouts,
     required Matrix4 transform,
+    bool? isReadOnly,
   }) {
     this.nodeLayouts = nodeLayouts;
     this.transform = transform;
+    if (isReadOnly != null) {
+      this.isReadOnly = isReadOnly;
+    }
   }
 
   /// Handle tap down event
@@ -90,6 +96,20 @@ class GestureHandler {
     // Skip handling if in edit mode - let the edit overlay handle it
     // This prevents exiting edit mode when clicking on node padding areas
     if (isEditMode) {
+      return;
+    }
+
+    if (isReadOnly) {
+      final hyperlinkHit = hitTestHyperlinkIndicator(details.localPosition);
+      if (hyperlinkHit != null) {
+        _handleHyperlinkClick(hyperlinkHit);
+        return;
+      }
+
+      final expandIndicatorHit = hitTestExpandIndicator(details.localPosition);
+      if (expandIndicatorHit != null) {
+        controller.toggleNodeExpanded(expandIndicatorHit);
+      }
       return;
     }
 
@@ -319,7 +339,7 @@ class GestureHandler {
   ///
   void handleLongPress(Offset position, {bool isEditMode = false}) {
     // Skip handling if in edit mode
-    if (isEditMode) {
+    if (isEditMode || isReadOnly) {
       return;
     }
 
@@ -334,7 +354,7 @@ class GestureHandler {
   ///
   void handleSecondaryTapUp(TapUpDetails details, {bool isEditMode = false}) {
     // Skip handling if in edit mode
-    if (isEditMode) {
+    if (isEditMode || isReadOnly) {
       return;
     }
 
@@ -347,6 +367,15 @@ class GestureHandler {
 
   /// Handle pan start (for dragging)
   void handlePanStart(DragStartDetails details) {
+    if (isReadOnly) {
+      _isDraggingSelection = false;
+      _isDraggingNode = false;
+      _isDraggingControlPoint = false;
+      _isPanningCanvas = true;
+      controller.zoomPanManager.handlePanStart(details.localPosition);
+      return;
+    }
+
     _isPanningCanvas = false;
 
     // First check if we're dragging an arrow control point
@@ -406,6 +435,25 @@ class GestureHandler {
 
     _isPanningCanvas = false;
     _isScalingGesture = false;
+
+    if (isReadOnly) {
+      _isDraggingSelection = false;
+      _isDraggingNode = false;
+      _isDraggingControlPoint = false;
+
+      if (isRightMouseButton) {
+        return;
+      }
+
+      if (details.pointerCount > 1) {
+        _isScalingGesture = true;
+        controller.zoomPanManager.handleScaleStart(details);
+      } else {
+        _isPanningCanvas = true;
+        controller.zoomPanManager.handlePanStart(details.localFocalPoint);
+      }
+      return;
+    }
 
     // Skip drag selection if right mouse button is pressed
     if (isRightMouseButton) {

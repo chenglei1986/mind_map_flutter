@@ -289,6 +289,7 @@ class MindMapState extends State<MindMapWidget> {
         _gestureHandler.updateContext(
           nodeLayouts: _nodeLayouts,
           transform: _transform,
+          isReadOnly: widget.config.readOnly,
         );
       }
     });
@@ -362,6 +363,7 @@ class MindMapState extends State<MindMapWidget> {
       _gestureHandler.updateContext(
         nodeLayouts: _nodeLayouts,
         transform: _transform,
+        isReadOnly: widget.config.readOnly,
       );
       return;
     }
@@ -386,6 +388,7 @@ class MindMapState extends State<MindMapWidget> {
       controller: _controller,
       nodeLayouts: _nodeLayouts,
       transform: _transform,
+      isReadOnly: widget.config.readOnly,
       onBeginEdit: _beginEdit,
       onBeginEditSummary: _beginSummaryEdit,
       onBeginEditArrow: _beginArrowEdit,
@@ -555,6 +558,8 @@ class MindMapState extends State<MindMapWidget> {
 
   /// Begin editing a node
   void _beginEdit(String nodeId) {
+    if (widget.config.readOnly) return;
+
     final node = _findNode(_controller.getData().nodeData, nodeId);
     if (node == null) return;
 
@@ -587,6 +592,8 @@ class MindMapState extends State<MindMapWidget> {
   }
 
   void _beginSummaryEdit(String summaryId) {
+    if (widget.config.readOnly) return;
+
     final summary = _controller.getSummary(summaryId);
     if (summary == null) return;
     _controller.selectSummary(summaryId);
@@ -719,6 +726,8 @@ class MindMapState extends State<MindMapWidget> {
   }
 
   void _beginArrowEdit(String arrowId) {
+    if (widget.config.readOnly) return;
+
     final arrow = _controller.getArrow(arrowId);
     if (arrow == null) return;
 
@@ -787,7 +796,7 @@ class MindMapState extends State<MindMapWidget> {
   ///
   void _showContextMenu(String nodeId, Offset position) {
     // Only show context menu if enabled in config
-    if (!widget.config.enableContextMenu) {
+    if (!widget.config.enableContextMenu || widget.config.readOnly) {
       return;
     }
 
@@ -1254,8 +1263,16 @@ class MindMapState extends State<MindMapWidget> {
       return SystemMouseCursors.basic;
     }
 
-    if (_gestureHandler.hitTestHyperlinkIndicator(screenPosition) != null ||
-        _gestureHandler.hitTestExpandIndicator(screenPosition) != null ||
+    final hasLinkOrExpandHit =
+        _gestureHandler.hitTestHyperlinkIndicator(screenPosition) != null ||
+        _gestureHandler.hitTestExpandIndicator(screenPosition) != null;
+    if (widget.config.readOnly) {
+      return hasLinkOrExpandHit
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic;
+    }
+
+    if (hasLinkOrExpandHit ||
         _gestureHandler.hitTestSummary(screenPosition) != null ||
         _gestureHandler.hitTestArrowControlPoint(screenPosition) != null ||
         _gestureHandler.hitTestArrow(screenPosition) != null ||
@@ -1300,6 +1317,10 @@ class MindMapState extends State<MindMapWidget> {
         focusNode: _widgetFocusNode,
         autofocus: true,
         onKeyEvent: (event) {
+          if (widget.config.readOnly) {
+            return;
+          }
+
           // Only handle keyboard shortcuts if enabled in config
           if (!widget.config.enableKeyboardShortcuts) {
             return;

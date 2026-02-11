@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:mind_map_flutter/mind_map_flutter.dart';
 import '../../utils/web_export_downloader_stub.dart'
     if (dart.library.html) '../../utils/web_export_downloader_web.dart'
@@ -20,10 +20,24 @@ class HomePage extends StatefulWidget {
 
 enum _ExportFormat { png, json }
 
+enum _AppBarAction {
+  importJson,
+  exportPng,
+  exportJson,
+  distributionAverage,
+  distributionLeft,
+  distributionRight,
+  resetScenario,
+  undo,
+  redo,
+  centerView,
+}
+
 class _HomePageState extends State<HomePage> {
   late final MindMapController _controller;
   StreamSubscription<MindMapEvent>? _eventSubscription;
   final List<String> _eventLogs = <String>[];
+  bool _readOnly = false;
 
   @override
   void initState() {
@@ -48,6 +62,22 @@ class _HomePageState extends State<HomePage> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _toggleReadOnly() {
+    setState(() {
+      _readOnly = !_readOnly;
+    });
+    _snack(_readOnly ? 'Read-only enabled' : 'Read-only disabled');
+  }
+
+  void _toggleTheme() {
+    final currentTheme = _controller.getData().theme;
+    final isDarkTheme =
+        currentTheme.name.toLowerCase() == 'dark' ||
+        currentTheme.variables.bgColor.computeLuminance() < 0.5;
+    _controller.setTheme(isDarkTheme ? MindMapTheme.light : MindMapTheme.dark);
+    _snack(isDarkTheme ? 'Light theme enabled' : 'Dark theme enabled');
   }
 
   void _onEvent(MindMapEvent event) {
@@ -397,18 +427,18 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _exportPng() async {
     try {
-      final bytes = await _controller.exportToPng(pixelRatio: 2.0);
+      final bytes = await _controller.exportToPng(pixelRatio: 1.5);
       if (_isMobilePlatform) {
-        final result = await ImageGallerySaver.saveImage(
-          bytes,
-          quality: 100,
-          name: 'mind_map_${DateTime.now().millisecondsSinceEpoch}',
-        );
-        if (_isGallerySaveSuccess(result)) {
-          _snack('PNG 已导出到相册 / PNG exported to gallery');
-        } else {
-          _snack('PNG 导出到相册失败 / Failed to export PNG to gallery');
+        final hasAccess = await Gal.hasAccess();
+        final granted = hasAccess ? true : await Gal.requestAccess();
+        if (!granted) {
+          _snack('无法访问相册 / Gallery access denied');
+          return;
         }
+
+        final fileName = 'mind_map_${DateTime.now().millisecondsSinceEpoch}';
+        await Gal.putImageBytes(bytes, name: fileName);
+        _snack('PNG 已保存到相册 / PNG saved to gallery');
         return;
       }
 
@@ -419,6 +449,8 @@ class _HomePageState extends State<HomePage> {
         allowedExtensions: const ['png'],
         mimeType: 'image/png',
       );
+    } on GalException catch (error) {
+      _snack('保存到相册失败 / Save to gallery failed: ${error.type.message}');
     } catch (error) {
       _snack('Export PNG failed: $error');
     }
@@ -498,15 +530,6 @@ class _HomePageState extends State<HomePage> {
     _snack('Exported: $savedPath');
   }
 
-  bool _isGallerySaveSuccess(dynamic result) {
-    if (result is bool) return result;
-    if (result is! Map) return false;
-    final success = result['isSuccess'] ?? result['success'];
-    if (success is bool) return success;
-    if (success is num) return success != 0;
-    return result['filePath'] != null || result['savedFilePath'] != null;
-  }
-
   String _distributionLabel(LayoutDirection direction) {
     switch (direction) {
       case LayoutDirection.side:
@@ -537,11 +560,54 @@ class _HomePageState extends State<HomePage> {
     return event.runtimeType.toString();
   }
 
+  void _onAppBarActionSelected(_AppBarAction action) {
+    switch (action) {
+      case _AppBarAction.importJson:
+        unawaited(_importJson());
+        return;
+      case _AppBarAction.exportPng:
+        unawaited(_exportPng());
+        return;
+      case _AppBarAction.exportJson:
+        unawaited(_exportJson());
+        return;
+      case _AppBarAction.distributionAverage:
+        _setDistribution(LayoutDirection.side);
+        return;
+      case _AppBarAction.distributionLeft:
+        _setDistribution(LayoutDirection.left);
+        return;
+      case _AppBarAction.distributionRight:
+        _setDistribution(LayoutDirection.right);
+        return;
+      case _AppBarAction.resetScenario:
+        _resetMap();
+        return;
+      case _AppBarAction.undo:
+        if (_controller.canUndo()) {
+          _controller.undo();
+        }
+        return;
+      case _AppBarAction.redo:
+        if (_controller.canRedo()) {
+          _controller.redo();
+        }
+        return;
+      case _AppBarAction.centerView:
+        _controller.centerView();
+        return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _controller.getData();
     final selected = _selectedNode;
     final currentDirection = data.direction;
+    final isDarkTheme =
+        data.theme.name.toLowerCase() == 'dark' ||
+        data.theme.variables.bgColor.computeLuminance() < 0.5;
+    final isCompactAppBar = MediaQuery.sizeOf(context).width < 700;
     final selectedText = selected == null
         ? 'No selection'
         : '${selected.topic} (${selected.id})';
@@ -549,114 +615,218 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 12,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Web Frontend Tech Mind Map'),
-            Text(
-              selectedText,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-            ),
-          ],
-        ),
+        title: isCompactAppBar
+            ? const Text('Web Frontend Map', overflow: TextOverflow.ellipsis)
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Web Frontend Tech Mind Map'),
+                  Text(
+                    selectedText,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
         actions: [
           IconButton(
-            tooltip: 'Import JSON',
-            onPressed: () {
-              unawaited(_importJson());
-            },
-            icon: const Icon(Icons.file_open_outlined),
+            tooltip: isDarkTheme
+                ? 'Switch to light theme'
+                : 'Switch to dark theme',
+            onPressed: _toggleTheme,
+            icon: Icon(isDarkTheme ? Icons.light_mode : Icons.dark_mode),
           ),
-          PopupMenuButton<_ExportFormat>(
-            tooltip: 'Export',
-            icon: const Icon(Icons.ios_share_outlined),
-            onSelected: (format) {
-              unawaited(_onExportSelected(format));
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem<_ExportFormat>(
-                value: _ExportFormat.png,
-                child: Text('Export PNG'),
-              ),
-              PopupMenuItem<_ExportFormat>(
-                value: _ExportFormat.json,
-                child: Text('Export JSON'),
-              ),
-            ],
+          IconButton(
+            tooltip: _readOnly ? 'Read-only: ON' : 'Read-only: OFF',
+            onPressed: _toggleReadOnly,
+            icon: Icon(_readOnly ? Icons.lock : Icons.lock_open),
           ),
-          PopupMenuButton<LayoutDirection>(
-            tooltip: 'Node distribution',
-            icon: const Icon(Icons.account_tree_outlined),
-            onSelected: _setDistribution,
-            itemBuilder: (context) => [
-              PopupMenuItem<LayoutDirection>(
-                value: LayoutDirection.side,
-                child: Row(
-                  children: [
-                    Icon(
-                      currentDirection == LayoutDirection.side
-                          ? Icons.check
-                          : Icons.circle_outlined,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Average distribution'),
-                  ],
+          if (isCompactAppBar)
+            PopupMenuButton<_AppBarAction>(
+              tooltip: 'More actions',
+              icon: const Icon(Icons.more_vert),
+              onSelected: _onAppBarActionSelected,
+              itemBuilder: (context) => [
+                const PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.importJson,
+                  child: Text('Import JSON'),
                 ),
-              ),
-              PopupMenuItem<LayoutDirection>(
-                value: LayoutDirection.left,
-                child: Row(
-                  children: [
-                    Icon(
-                      currentDirection == LayoutDirection.left
-                          ? Icons.check
-                          : Icons.circle_outlined,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Left distribution'),
-                  ],
+                const PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.exportPng,
+                  child: Text('Export PNG'),
                 ),
-              ),
-              PopupMenuItem<LayoutDirection>(
-                value: LayoutDirection.right,
-                child: Row(
-                  children: [
-                    Icon(
-                      currentDirection == LayoutDirection.right
-                          ? Icons.check
-                          : Icons.circle_outlined,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Right distribution'),
-                  ],
+                const PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.exportJson,
+                  child: Text('Export JSON'),
                 ),
-              ),
-            ],
-          ),
-          IconButton(
-            tooltip: 'Reset scenario',
-            onPressed: _resetMap,
-            icon: const Icon(Icons.auto_awesome),
-          ),
-          IconButton(
-            tooltip: 'Undo',
-            onPressed: _controller.canUndo() ? _controller.undo : null,
-            icon: const Icon(Icons.undo_rounded),
-          ),
-          IconButton(
-            tooltip: 'Redo',
-            onPressed: _controller.canRedo() ? _controller.redo : null,
-            icon: const Icon(Icons.redo_rounded),
-          ),
-          IconButton(
-            tooltip: 'Center view',
-            onPressed: _controller.centerView,
-            icon: const Icon(Icons.filter_center_focus),
-          ),
+                const PopupMenuDivider(),
+                PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.distributionAverage,
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentDirection == LayoutDirection.side
+                            ? Icons.check
+                            : Icons.circle_outlined,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Average distribution'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.distributionLeft,
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentDirection == LayoutDirection.left
+                            ? Icons.check
+                            : Icons.circle_outlined,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Left distribution'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.distributionRight,
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentDirection == LayoutDirection.right
+                            ? Icons.check
+                            : Icons.circle_outlined,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Right distribution'),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.resetScenario,
+                  child: Text('Reset scenario'),
+                ),
+                PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.undo,
+                  enabled: _controller.canUndo(),
+                  child: const Text('Undo'),
+                ),
+                PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.redo,
+                  enabled: _controller.canRedo(),
+                  child: const Text('Redo'),
+                ),
+                const PopupMenuItem<_AppBarAction>(
+                  value: _AppBarAction.centerView,
+                  child: Text('Center view'),
+                ),
+              ],
+            )
+          else ...[
+            IconButton(
+              tooltip: 'Import JSON',
+              onPressed: () {
+                unawaited(_importJson());
+              },
+              icon: const Icon(Icons.file_open_outlined),
+            ),
+            PopupMenuButton<_ExportFormat>(
+              tooltip: 'Export',
+              icon: const Icon(Icons.ios_share_outlined),
+              onSelected: (format) {
+                unawaited(_onExportSelected(format));
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem<_ExportFormat>(
+                  value: _ExportFormat.png,
+                  child: Text('Export PNG'),
+                ),
+                PopupMenuItem<_ExportFormat>(
+                  value: _ExportFormat.json,
+                  child: Text('Export JSON'),
+                ),
+              ],
+            ),
+            PopupMenuButton<LayoutDirection>(
+              tooltip: 'Node distribution',
+              icon: const Icon(Icons.account_tree_outlined),
+              onSelected: _setDistribution,
+              itemBuilder: (context) => [
+                PopupMenuItem<LayoutDirection>(
+                  value: LayoutDirection.side,
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentDirection == LayoutDirection.side
+                            ? Icons.check
+                            : Icons.circle_outlined,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Average distribution'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<LayoutDirection>(
+                  value: LayoutDirection.left,
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentDirection == LayoutDirection.left
+                            ? Icons.check
+                            : Icons.circle_outlined,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Left distribution'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<LayoutDirection>(
+                  value: LayoutDirection.right,
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentDirection == LayoutDirection.right
+                            ? Icons.check
+                            : Icons.circle_outlined,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Right distribution'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            IconButton(
+              tooltip: 'Reset scenario',
+              onPressed: _resetMap,
+              icon: const Icon(Icons.auto_awesome),
+            ),
+            IconButton(
+              tooltip: 'Undo',
+              onPressed: _controller.canUndo() ? _controller.undo : null,
+              icon: const Icon(Icons.undo_rounded),
+            ),
+            IconButton(
+              tooltip: 'Redo',
+              onPressed: _controller.canRedo() ? _controller.redo : null,
+              icon: const Icon(Icons.redo_rounded),
+            ),
+            IconButton(
+              tooltip: 'Center view',
+              onPressed: _controller.centerView,
+              icon: const Icon(Icons.filter_center_focus),
+            ),
+          ],
         ],
       ),
       body: Container(
@@ -671,11 +841,12 @@ class _HomePageState extends State<HomePage> {
           child: MindMapWidget(
             initialData: data,
             controller: _controller,
-            config: const MindMapConfig(
+            config: MindMapConfig(
               allowUndo: true,
               enableKeyboardShortcuts: true,
               enableContextMenu: true,
               enableDragDrop: true,
+              readOnly: _readOnly,
             ),
           ),
         ),

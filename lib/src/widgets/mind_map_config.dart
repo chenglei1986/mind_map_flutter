@@ -25,6 +25,12 @@ class MindMapConfig {
   /// Whether to enable drag and drop
   final bool enableDragDrop;
 
+  /// Whether the widget runs in read-only mode
+  ///
+  /// In read-only mode, mutating interactions are disabled and only
+  /// navigation interactions are kept (zoom/pan, expand/collapse, hyperlinks).
+  final bool readOnly;
+
   /// Locale selection for built-in labels and prompts
   final MindMapLocale locale;
 
@@ -36,6 +42,7 @@ class MindMapConfig {
     this.enableKeyboardShortcuts = true,
     this.enableContextMenu = true,
     this.enableDragDrop = true,
+    this.readOnly = false,
     this.locale = MindMapLocale.auto,
   });
 
@@ -47,6 +54,7 @@ class MindMapConfig {
     bool? enableKeyboardShortcuts,
     bool? enableContextMenu,
     bool? enableDragDrop,
+    bool? readOnly,
     MindMapLocale? locale,
   }) {
     return MindMapConfig(
@@ -58,6 +66,7 @@ class MindMapConfig {
           enableKeyboardShortcuts ?? this.enableKeyboardShortcuts,
       enableContextMenu: enableContextMenu ?? this.enableContextMenu,
       enableDragDrop: enableDragDrop ?? this.enableDragDrop,
+      readOnly: readOnly ?? this.readOnly,
       locale: locale ?? this.locale,
     );
   }
@@ -74,6 +83,7 @@ class MindMapConfig {
           enableKeyboardShortcuts == other.enableKeyboardShortcuts &&
           enableContextMenu == other.enableContextMenu &&
           enableDragDrop == other.enableDragDrop &&
+          readOnly == other.readOnly &&
           locale == other.locale;
 
   @override
@@ -85,5 +95,6 @@ class MindMapConfig {
       enableKeyboardShortcuts.hashCode ^
       enableContextMenu.hashCode ^
       enableDragDrop.hashCode ^
+      readOnly.hashCode ^
       locale.hashCode;
 }

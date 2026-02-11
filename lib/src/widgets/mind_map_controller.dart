@@ -2653,8 +2653,8 @@ class MindMapController extends ChangeNotifier {
   ///
   /// Parameters:
   /// - [size]: Optional size for the exported image. If not provided,
-  ///   uses the current widget size. If provided, the mind map will be
-  ///   rendered at the specified size.
+  ///   export uses an auto size based on the full mind map bounds so the
+  ///   content is not over-compressed.
   /// - [pixelRatio]: The pixel ratio for the image. Defaults to 1.0.
   ///   Higher values produce higher resolution images.
   ///
@@ -2690,7 +2690,12 @@ class MindMapController extends ChangeNotifier {
       _data.direction,
     );
     final bounds = _calculateBoundingBox(layouts);
-    final exportSize = size ?? boundary.size;
+    const exportPadding = 8.0;
+    final autoExportSize = Size(
+      math.max(boundary.size.width, bounds.width + exportPadding * 2),
+      math.max(boundary.size.height, bounds.height + exportPadding * 2),
+    );
+    final exportSize = size ?? autoExportSize;
     final effectivePixelRatio = pixelRatio <= 0.0 ? 1.0 : pixelRatio;
     final renderWidth = math.max(
       1,
@@ -2701,7 +2706,6 @@ class MindMapController extends ChangeNotifier {
       (exportSize.height * effectivePixelRatio).round(),
     );
     final renderSize = Size(renderWidth.toDouble(), renderHeight.toDouble());
-    const exportPadding = 8.0;
     final availableWidth = math.max(1.0, renderSize.width - exportPadding * 2);
     final availableHeight = math.max(
       1.0,
@@ -2732,6 +2736,17 @@ class MindMapController extends ChangeNotifier {
     final canvas = Canvas(
       recorder,
       Rect.fromLTWH(0.0, 0.0, renderSize.width, renderSize.height),
+    );
+    final themeBgColor = _data.theme.variables.bgColor;
+    final isDarkTheme =
+        _data.theme.name.toLowerCase() == 'dark' ||
+        themeBgColor.computeLuminance() < 0.5;
+    final exportBackgroundColor = isDarkTheme
+        ? themeBgColor.withAlpha(0xFF)
+        : Colors.white;
+    canvas.drawRect(
+      Rect.fromLTWH(0.0, 0.0, renderSize.width, renderSize.height),
+      Paint()..color = exportBackgroundColor,
     );
     final painter = MindMapPainter(
       data: _data,
@@ -2829,7 +2844,10 @@ class MindMapController extends ChangeNotifier {
     for (final summary in _data.summaries) {
       final parentNode = _findNode(_data.nodeData, summary.parentNodeId);
       if (parentNode == null) continue;
-      final parentDepth = _findNodeDepthById(_data.nodeData, summary.parentNodeId);
+      final parentDepth = _findNodeDepthById(
+        _data.nodeData,
+        summary.parentNodeId,
+      );
       if (parentDepth < 0) continue;
       final summaryBounds = SummaryRenderer.getSummaryBounds(
         summary,

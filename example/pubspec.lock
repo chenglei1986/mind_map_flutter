@@ -160,6 +160,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  gal:
+    dependency: "direct main"
+    description:
+      name: gal
+      sha256: "969598f986789127fd407a750413249e1352116d4c2be66e81837ffeeaafdfee"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.3.2"
   glob:
     dependency: transitive
     description:
@@ -176,14 +184,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.0.1"
-  image_gallery_saver:
-    dependency: "direct main"
-    description:
-      name: image_gallery_saver
-      sha256: "0aba74216a4d9b0561510cb968015d56b701ba1bd94aace26aacdd8ae5761816"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "2.0.3"
   leak_tracker:
     dependency: transitive
     description:
@@ -254,7 +254,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.0.1"
+    version: "1.1.0"
   native_toolchain_c:
     dependency: transitive
     description:

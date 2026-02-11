@@ -14,6 +14,7 @@
 - 撤销/重做与复制/粘贴
 - 聚焦模式、缩放/平移、居中与自适应视图
 - JSON / PNG 导出
+- 只读模式（保留缩放/平移、展开/折叠、打开链接）
 - 内置明暗主题，支持自定义主题
 - 内置文案支持 `MindMapLocale.auto/zh/en`
 - 支持 Android、iOS、Web、Windows、macOS、Linux
@@ -94,6 +95,14 @@ void initState() {
     }
   });
 }
+```
+
+启用只读模式：
+
+```dart
+const config = MindMapConfig(
+  readOnly: true,
+);
 ```
 
 ## 更多示例

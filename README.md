@@ -16,6 +16,7 @@ Language: **English** | [简体中文](README.zh-CN.md)
 - Undo/redo history and clipboard copy/paste
 - Focus mode, zoom/pan, fit-to-view, and center-on-node
 - JSON / PNG export
+- Read-only mode (keeps zoom/pan, expand/collapse, and hyperlink opening)
 - Built-in light and dark themes, plus custom themes
 - i18n for built-in labels (`MindMapLocale.auto/zh/en`)
 - Cross-platform Flutter support (Android, iOS, Web, Windows, macOS, Linux)
@@ -96,6 +97,14 @@ void initState() {
     }
   });
 }
+```
+
+Enable read-only mode:
+
+```dart
+const config = MindMapConfig(
+  readOnly: true,
+);
 ```
 
 ## More Examples
