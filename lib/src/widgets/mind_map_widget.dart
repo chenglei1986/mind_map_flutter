@@ -99,6 +99,7 @@ class MindMapState extends State<MindMapWidget> {
   // Hover state for expand indicators
   String? _hoveredExpandNodeId;
   MouseCursor _canvasMouseCursor = SystemMouseCursors.basic;
+  Size? _lastViewportSize;
 
   // Context menu state
   String? _contextMenuNodeId;
@@ -234,6 +235,7 @@ class MindMapState extends State<MindMapWidget> {
 
       // Use new controller
       _controller = widget.controller!;
+      _lastViewportSize = null;
       _controller.addListener(_onControllerChanged);
       _calculateLayout();
       _syncNodeImages();
@@ -1306,229 +1308,264 @@ class MindMapState extends State<MindMapWidget> {
     });
   }
 
+  void _syncViewportSizeFromLayout(Size layoutSize) {
+    if (!layoutSize.width.isFinite ||
+        !layoutSize.height.isFinite ||
+        layoutSize.width <= 0 ||
+        layoutSize.height <= 0) {
+      return;
+    }
+
+    final previousSize = _lastViewportSize;
+    if (previousSize != null &&
+        (previousSize.width - layoutSize.width).abs() < 0.5 &&
+        (previousSize.height - layoutSize.height).abs() < 0.5) {
+      return;
+    }
+
+    _lastViewportSize = layoutSize;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _controller.setViewportSize(layoutSize);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _controller.getData();
     final strings = _resolveStrings();
 
-    return Container(
-      color: data.theme.variables.bgColor,
-      child: KeyboardListener(
-        focusNode: _widgetFocusNode,
-        autofocus: true,
-        onKeyEvent: (event) {
-          if (widget.config.readOnly) {
-            return;
-          }
-
-          // Only handle keyboard shortcuts if enabled in config
-          if (!widget.config.enableKeyboardShortcuts) {
-            return;
-          }
-
-          // While editing, suppress global shortcuts (handled by edit overlays)
-          if (_editingNodeId != null ||
-              _editingSummaryId != null ||
-              _editingArrowId != null) {
-            return;
-          }
-
-          // Track Ctrl/Cmd key state for multi-selection
-          if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
-              event.logicalKey == LogicalKeyboardKey.controlRight ||
-              event.logicalKey == LogicalKeyboardKey.metaLeft ||
-              event.logicalKey == LogicalKeyboardKey.metaRight) {
-            setState(() {
-              _isCtrlPressed = event is KeyDownEvent || event is KeyRepeatEvent;
-            });
-          }
-
-          // Track Space key state for canvas panning
-          if (event.logicalKey == LogicalKeyboardKey.space) {
-            setState(() {
-              _isSpacePressed =
-                  event is KeyDownEvent || event is KeyRepeatEvent;
-            });
-          }
-
-          // Handle keyboard shortcuts
-          _keyboardHandler.handleKeyEvent(event);
-        },
-        child: Listener(
-          // Handle mouse wheel for zoom
-          onPointerSignal: (event) {
-            if (event is PointerScrollEvent) {
-              final renderBox = context.findRenderObject() as RenderBox?;
-              if (renderBox != null) {
-                _controller.setViewportSize(renderBox.size);
-                _controller.zoomPanManager.handleMouseWheel(
-                  event,
-                  event.localPosition,
-                );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _syncViewportSizeFromLayout(constraints.biggest);
+        return Container(
+          color: data.theme.variables.bgColor,
+          child: KeyboardListener(
+            focusNode: _widgetFocusNode,
+            autofocus: true,
+            onKeyEvent: (event) {
+              if (widget.config.readOnly) {
+                return;
               }
-            }
-          },
-          onPointerDown: (event) {
-            if (_editingNodeId == null &&
-                _editingSummaryId == null &&
-                _editingArrowId == null) {
-              _widgetFocusNode.requestFocus();
-            }
-            if (event.kind == PointerDeviceKind.mouse &&
-                (event.buttons & kSecondaryMouseButton) != 0) {
-              _clearCanvasHoverFeedback();
-              _isSecondaryPanning = true;
-              _isRightMouseButtonDown = true;
-              _secondaryPanLastPosition = event.localPosition;
-              _controller.zoomPanManager.handlePanStart(event.localPosition);
-            }
-          },
-          onPointerMove: (event) {
-            if (_isSecondaryPanning && _secondaryPanLastPosition != null) {
-              final delta = event.localPosition - _secondaryPanLastPosition!;
-              _secondaryPanLastPosition = event.localPosition;
-              _controller.zoomPanManager.handlePanUpdate(delta);
-            }
 
-            // Avoid expensive hover hit-testing while dragging/panning.
-            if (event.kind == PointerDeviceKind.mouse &&
-                event.buttons == 0 &&
-                !_isSecondaryPanning &&
-                !_dragManager.isDragging &&
-                _selectionRect == null) {
-              _updateCanvasHoverFeedback(event.localPosition);
-            }
-          },
-          onPointerHover: (event) {
-            _updateCanvasHoverFeedback(event.localPosition);
-          },
-          onPointerUp: (event) {
-            if (_isSecondaryPanning) {
-              _isSecondaryPanning = false;
-              _isRightMouseButtonDown = false;
-              _secondaryPanLastPosition = null;
-              _controller.zoomPanManager.handlePanEnd();
-            }
-          },
-          onPointerCancel: (_) {
-            if (_isSecondaryPanning) {
-              _isSecondaryPanning = false;
-              _isRightMouseButtonDown = false;
-              _secondaryPanLastPosition = null;
-              _controller.zoomPanManager.handlePanEnd();
-            }
-          },
-          child: Stack(
-            children: [
-              // Main mind map canvas
-              RepaintBoundary(
-                key: _repaintBoundaryKey,
-                child: MouseRegion(
-                  cursor: _canvasMouseCursor,
-                  onExit: (_) => _clearCanvasHoverFeedback(),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapDown: _gestureHandler.handleTapDown,
-                    onTapUp: (details) => _gestureHandler.handleTapUp(
-                      details,
-                      isCtrlPressed: _isCtrlPressed,
-                      isEditMode:
-                          _editingNodeId != null ||
-                          _editingSummaryId != null ||
-                          _editingArrowId != null,
-                    ),
-                    onScaleStart: (details) => _gestureHandler.handleScaleStart(
-                      details,
-                      isRightMouseButton: _isRightMouseButtonDown,
-                      isSpacePressed: _isSpacePressed,
-                      isEditMode:
-                          _editingNodeId != null ||
-                          _editingSummaryId != null ||
-                          _editingArrowId != null,
-                    ),
-                    onScaleUpdate: (details) =>
-                        _gestureHandler.handleScaleUpdate(
+              // Only handle keyboard shortcuts if enabled in config
+              if (!widget.config.enableKeyboardShortcuts) {
+                return;
+              }
+
+              // While editing, suppress global shortcuts (handled by edit overlays)
+              if (_editingNodeId != null ||
+                  _editingSummaryId != null ||
+                  _editingArrowId != null) {
+                return;
+              }
+
+              // Track Ctrl/Cmd key state for multi-selection
+              if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
+                  event.logicalKey == LogicalKeyboardKey.controlRight ||
+                  event.logicalKey == LogicalKeyboardKey.metaLeft ||
+                  event.logicalKey == LogicalKeyboardKey.metaRight) {
+                setState(() {
+                  _isCtrlPressed =
+                      event is KeyDownEvent || event is KeyRepeatEvent;
+                });
+              }
+
+              // Track Space key state for canvas panning
+              if (event.logicalKey == LogicalKeyboardKey.space) {
+                setState(() {
+                  _isSpacePressed =
+                      event is KeyDownEvent || event is KeyRepeatEvent;
+                });
+              }
+
+              // Handle keyboard shortcuts
+              _keyboardHandler.handleKeyEvent(event);
+            },
+            child: Listener(
+              // Handle mouse wheel for zoom
+              onPointerSignal: (event) {
+                if (event is PointerScrollEvent) {
+                  final renderBox = context.findRenderObject() as RenderBox?;
+                  if (renderBox != null) {
+                    _controller.setViewportSize(renderBox.size);
+                    _controller.zoomPanManager.handleMouseWheel(
+                      event,
+                      event.localPosition,
+                    );
+                  }
+                }
+              },
+              onPointerDown: (event) {
+                if (_editingNodeId == null &&
+                    _editingSummaryId == null &&
+                    _editingArrowId == null) {
+                  _widgetFocusNode.requestFocus();
+                }
+                if (event.kind == PointerDeviceKind.mouse &&
+                    (event.buttons & kSecondaryMouseButton) != 0) {
+                  _clearCanvasHoverFeedback();
+                  _isSecondaryPanning = true;
+                  _isRightMouseButtonDown = true;
+                  _secondaryPanLastPosition = event.localPosition;
+                  _controller.zoomPanManager.handlePanStart(
+                    event.localPosition,
+                  );
+                }
+              },
+              onPointerMove: (event) {
+                if (_isSecondaryPanning && _secondaryPanLastPosition != null) {
+                  final delta =
+                      event.localPosition - _secondaryPanLastPosition!;
+                  _secondaryPanLastPosition = event.localPosition;
+                  _controller.zoomPanManager.handlePanUpdate(delta);
+                }
+
+                // Avoid expensive hover hit-testing while dragging/panning.
+                if (event.kind == PointerDeviceKind.mouse &&
+                    event.buttons == 0 &&
+                    !_isSecondaryPanning &&
+                    !_dragManager.isDragging &&
+                    _selectionRect == null) {
+                  _updateCanvasHoverFeedback(event.localPosition);
+                }
+              },
+              onPointerHover: (event) {
+                _updateCanvasHoverFeedback(event.localPosition);
+              },
+              onPointerUp: (event) {
+                if (_isSecondaryPanning) {
+                  _isSecondaryPanning = false;
+                  _isRightMouseButtonDown = false;
+                  _secondaryPanLastPosition = null;
+                  _controller.zoomPanManager.handlePanEnd();
+                }
+              },
+              onPointerCancel: (_) {
+                if (_isSecondaryPanning) {
+                  _isSecondaryPanning = false;
+                  _isRightMouseButtonDown = false;
+                  _secondaryPanLastPosition = null;
+                  _controller.zoomPanManager.handlePanEnd();
+                }
+              },
+              child: Stack(
+                children: [
+                  // Main mind map canvas
+                  RepaintBoundary(
+                    key: _repaintBoundaryKey,
+                    child: MouseRegion(
+                      cursor: _canvasMouseCursor,
+                      onExit: (_) => _clearCanvasHoverFeedback(),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown: _gestureHandler.handleTapDown,
+                        onTapUp: (details) => _gestureHandler.handleTapUp(
                           details,
-                          isRightMouseButton: _isRightMouseButtonDown,
-                          isSpacePressed: _isSpacePressed,
-                        ),
-                    onScaleEnd: _gestureHandler.handleScaleEnd,
-                    onSecondaryTapUp: (details) =>
-                        _gestureHandler.handleSecondaryTapUp(
-                          details,
+                          isCtrlPressed: _isCtrlPressed,
                           isEditMode:
                               _editingNodeId != null ||
                               _editingSummaryId != null ||
                               _editingArrowId != null,
                         ),
-                    onLongPressStart: (details) =>
-                        _gestureHandler.handleLongPress(
-                          details.localPosition,
-                          isEditMode:
-                              _editingNodeId != null ||
-                              _editingSummaryId != null ||
-                              _editingArrowId != null,
-                        ),
-                    child: AnimatedBuilder(
-                      animation: _dragManager,
-                      builder: (context, _) {
-                        return CustomPaint(
-                          painter: MindMapPainter(
-                            data: data,
-                            nodeLayouts: _nodeLayouts,
-                            imageCache: Map<String, ui.Image>.unmodifiable(
-                              _decodedNodeImages,
+                        onScaleStart: (details) =>
+                            _gestureHandler.handleScaleStart(
+                              details,
+                              isRightMouseButton: _isRightMouseButtonDown,
+                              isSpacePressed: _isSpacePressed,
+                              isEditMode:
+                                  _editingNodeId != null ||
+                                  _editingSummaryId != null ||
+                                  _editingArrowId != null,
                             ),
-                            selectedNodeIds: _controller
-                                .getSelectedNodeIds()
-                                .toSet(),
-                            transform: _transform,
-                            selectionRect: _selectionRect,
-                            draggedNodeId: _dragManager.draggedNodeId,
-                            dragPosition: _dragManager.dragPosition,
-                            dropTargetNodeId: _dragManager.dropTargetNodeId,
-                            dropInsertType: _dragManager.dropInsertType,
-                            selectedArrowId: _controller.selectedArrowId,
-                            selectedSummaryId: _controller.selectedSummaryId,
-                            arrowSourceNodeId: _controller.arrowSourceNodeId,
-                            isFocusMode: _controller.isFocusMode,
-                            focusedNodeId: _controller.focusedNodeId,
-                            hoveredExpandNodeId: _hoveredExpandNodeId,
-                            strings: strings,
-                          ),
-                          child: const SizedBox.expand(),
-                        );
-                      },
+                        onScaleUpdate: (details) =>
+                            _gestureHandler.handleScaleUpdate(
+                              details,
+                              isRightMouseButton: _isRightMouseButtonDown,
+                              isSpacePressed: _isSpacePressed,
+                            ),
+                        onScaleEnd: _gestureHandler.handleScaleEnd,
+                        onSecondaryTapUp: (details) =>
+                            _gestureHandler.handleSecondaryTapUp(
+                              details,
+                              isEditMode:
+                                  _editingNodeId != null ||
+                                  _editingSummaryId != null ||
+                                  _editingArrowId != null,
+                            ),
+                        onLongPressStart: (details) =>
+                            _gestureHandler.handleLongPress(
+                              details.localPosition,
+                              isEditMode:
+                                  _editingNodeId != null ||
+                                  _editingSummaryId != null ||
+                                  _editingArrowId != null,
+                            ),
+                        child: AnimatedBuilder(
+                          animation: _dragManager,
+                          builder: (context, _) {
+                            return CustomPaint(
+                              painter: MindMapPainter(
+                                data: data,
+                                nodeLayouts: _nodeLayouts,
+                                imageCache: Map<String, ui.Image>.unmodifiable(
+                                  _decodedNodeImages,
+                                ),
+                                selectedNodeIds: _controller
+                                    .getSelectedNodeIds()
+                                    .toSet(),
+                                transform: _transform,
+                                selectionRect: _selectionRect,
+                                draggedNodeId: _dragManager.draggedNodeId,
+                                dragPosition: _dragManager.dragPosition,
+                                dropTargetNodeId: _dragManager.dropTargetNodeId,
+                                dropInsertType: _dragManager.dropInsertType,
+                                selectedArrowId: _controller.selectedArrowId,
+                                selectedSummaryId:
+                                    _controller.selectedSummaryId,
+                                arrowSourceNodeId:
+                                    _controller.arrowSourceNodeId,
+                                isFocusMode: _controller.isFocusMode,
+                                focusedNodeId: _controller.focusedNodeId,
+                                hoveredExpandNodeId: _hoveredExpandNodeId,
+                                strings: strings,
+                              ),
+                              child: const SizedBox.expand(),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
 
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: _SelectionRectPainter(
-                      rect: _selectionRect,
-                      fillColor: Colors.blueAccent.withValues(alpha: 0.25),
-                      borderColor: Colors.blueAccent.withValues(alpha: 0.9),
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: _SelectionRectPainter(
+                          rect: _selectionRect,
+                          fillColor: Colors.blueAccent.withValues(alpha: 0.25),
+                          borderColor: Colors.blueAccent.withValues(alpha: 0.9),
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
                     ),
-                    child: const SizedBox.expand(),
                   ),
-                ),
+
+                  // Edit mode overlay
+                  if (_editingNodeId != null) _buildEditOverlay(),
+                  if (_editingSummaryId != null) _buildSummaryEditOverlay(),
+                  if (_editingArrowId != null) _buildArrowEditOverlay(),
+
+                  // Context menu overlay
+                  if (_contextMenuNodeId != null &&
+                      _contextMenuPosition != null)
+                    _buildContextMenu(),
+                ],
               ),
-
-              // Edit mode overlay
-              if (_editingNodeId != null) _buildEditOverlay(),
-              if (_editingSummaryId != null) _buildSummaryEditOverlay(),
-              if (_editingArrowId != null) _buildArrowEditOverlay(),
-
-              // Context menu overlay
-              if (_contextMenuNodeId != null && _contextMenuPosition != null)
-                _buildContextMenu(),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
