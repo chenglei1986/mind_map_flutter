@@ -8,6 +8,8 @@
 
 [API 文档](doc/API_REFERENCES.zh-CN.md)
 
+在线演示: [https://mind_map_flutter.codemagic.app](https://mind_map_flutter.codemagic.app)
+
 ## 功能概览
 
 - 可编辑节点树，支持拖拽重组

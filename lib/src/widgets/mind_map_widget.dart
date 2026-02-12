@@ -1094,7 +1094,7 @@ class MindMapState extends State<MindMapWidget> {
   MindMapStrings _resolveStrings() {
     return MindMapStrings.resolve(
       widget.config.locale,
-      Localizations.maybeLocaleOf(context),
+      ui.PlatformDispatcher.instance.locale,
     );
   }
 

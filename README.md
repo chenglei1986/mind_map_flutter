@@ -10,6 +10,8 @@ Language: **English** | [简体中文](README.zh-CN.md)
 
 [API References](doc/API_REFERENCES.md)
 
+Online example: [https://mind_map_flutter.codemagic.app](https://mind_map_flutter.codemagic.app)
+
 ## Features
 
 - Editable tree nodes with drag-and-drop reorganization
